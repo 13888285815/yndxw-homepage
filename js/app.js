@@ -1,6 +1,6 @@
 /**
- * YNDXW 公共区首页 - 3D自然山水全景（v1.5）
- * 新增：建筑点击L2交互 + 萤火虫粒子 + 悬停高亮
+ * YNDXW 公共区首页 - 3D自然山水全景（v1.6）
+ * 新增：FPS监控 + 性能自适应 + LOD优化 + SEO
  */
 (function(){
 'use strict';
@@ -50,25 +50,33 @@ const cfg = WORLD_CONFIG;
 
 // 第一人称视角
 let camYaw=0, camPitch=0;
-let camPos = new THREE.Vector3(0, 5, 80); // 初始位置（会在init里调整）
+let camPos = new THREE.Vector3(0, 5, 80);
 let currentLayer='L1';
 let hoveredBuilding=null;
 
 // 鼠标/触摸状态
 let mouseDown=false, lastX=0, lastY=0;
 
-// ===== 新增：交互与粒子系统 =====
+// ===== 交互与粒子系统 =====
 let fireflyMeshes=[];
 let fireflyData=[];
 let isPanelOpen=false;
 let activeBuildingId=null;
 
-// ===== 新增：场景过渡 + 导航 + 管理员面板 =====
+// ===== 场景过渡 + 导航 + 管理员面板 =====
 let currentSceneName='公共区';
 let isTransitioning=false;
 let adminPanelVisible=false;
 let hudVisible=true;
+
+// ===== FPS 性能追踪（始终运行） =====
 let fpsFrames=0, fpsLastTime=0, fpsValue=0;
+let fpsHistory=[];              // FPS历史记录（用于中位数计算）
+let performanceLevel='medium';  // low / medium / high
+let prevPerfLevel='medium';
+let performanceEvalTimer=0;     // 上次性能评估时间
+let lowPerfTimer=0;             // 低性能持续秒数
+let activeFireflyCount=0;       // 当前可见粒子数
 let transitionEl=null;
 
 // 高亮用的边缘光材质（按building id存储）
@@ -231,6 +239,12 @@ function init(){
   try {
   clock = new THREE.Clock();
   
+  // 初始性能等级（根据 CPU 核心数判断设备能力）
+  var cpuCores = navigator.hardwareConcurrency || 4;
+  if(cpuCores <= 2) performanceLevel = 'low';
+  else if(cpuCores >= 8) performanceLevel = 'high';
+  prevPerfLevel = performanceLevel;
+  
   // 场景
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87CEEB);
@@ -247,13 +261,13 @@ function init(){
   const canvas = document.getElementById('scene');
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  
+  // 初始质量设置
+  applyInitialQuality();
   
   // 光照（确保场景有足够亮度）
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6)); // 环境光调亮
-  const sun = new THREE.DirectionalLight(0xfff4e0, 1.5); // 方向光调亮
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const sun = new THREE.DirectionalLight(0xfff4e0, 1.5);
   sun.position.set(100, 200, 50);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
@@ -270,6 +284,7 @@ function init(){
   buildBuildings();
   buildClouds();
   buildFireflies();
+  activeFireflyCount = fireflyMeshes.length;
   injectPanelHTML();
   
   // 调整相机位置（确保在地形上方）
@@ -311,8 +326,10 @@ function getHeight(x, z){
 }
 
 function buildTerrain(){
+  // 按性能等级选择地形精度（LOD）
+  var segLevel = { low: 60, medium: 120, high: 150 };
   const size = 400;
-  const seg = 150;
+  const seg = segLevel[performanceLevel] || 120;
   const geo = new THREE.PlaneGeometry(size, size, seg, seg);
   geo.rotateX(-Math.PI/2);
   const pos = geo.attributes.position;
@@ -331,7 +348,10 @@ function buildTerrain(){
 
 /* ============ 水面 ============ */
 function buildWater(){
-  const geo = new THREE.PlaneGeometry(120, 120, 32, 32);
+  // 按性能等级选择水面分段数（减少顶点数）
+  var waterSegLevel = { low: 12, medium: 20, high: 32 };
+  var ws = waterSegLevel[performanceLevel] || 20;
+  const geo = new THREE.PlaneGeometry(120, 120, ws, ws);
   geo.rotateX(-Math.PI/2);
   const mat = new THREE.MeshPhongMaterial({
     color: 0x3388aa, transparent: true, opacity: 0.7,
@@ -353,32 +373,77 @@ function animateWater(t){
   pos.needsUpdate = true;
 }
 
-/* ============ 树木 ============ */
+/* ============ 树木（低性能模式使用 Billboard 精灵） ============ */
 function buildTrees(){
-  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5c3a1e });
-  const leafMat = new THREE.MeshLambertMaterial({ color: 0x2d6b2e });
+  // 低性能模式使用 billboard（2D精灵面向相机）替代3D模型
+  var useBillboard = (performanceLevel === 'low');
+  var treeCountLevel = { low: 20, medium: 40, high: 60 };
+  var count = treeCountLevel[performanceLevel] || 40;
   
-  for(let i=0; i<60; i++){
+  // 创建 billboard 纹理（Canvas 绘制树形）
+  var billboardTex = null;
+  if(useBillboard){
+    var cv = document.createElement('canvas');
+    cv.width = 64;
+    cv.height = 128;
+    var ctx = cv.getContext('2d');
+    // 树干
+    ctx.fillStyle = '#5c3a1e';
+    ctx.fillRect(28, 60, 8, 50);
+    // 树冠
+    ctx.fillStyle = '#2d6b2e';
+    ctx.beginPath();
+    ctx.moveTo(32, 10);
+    ctx.lineTo(10, 60);
+    ctx.lineTo(54, 60);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(32, 50, 16, 0, Math.PI*2);
+    ctx.fill();
+    // 高光
+    ctx.fillStyle = 'rgba(144,238,144,0.3)';
+    ctx.beginPath();
+    ctx.arc(22, 42, 8, 0, Math.PI*2);
+    ctx.fill();
+    billboardTex = new THREE.CanvasTexture(cv);
+  }
+  
+  var trunkMat = new THREE.MeshLambertMaterial({ color: 0x5c3a1e });
+  var leafMat = new THREE.MeshLambertMaterial({ color: 0x2d6b2e });
+  var spriteMat = billboardTex ? new THREE.SpriteMaterial({ map: billboardTex, transparent: true, depthWrite: false }) : null;
+  
+  for(let i=0; i<count; i++){
     const x = (Math.random()-0.5)*350;
     const z = (Math.random()-0.5)*350;
     const h = getHeight(x, z);
     if(h < -3 || h > 30) continue;
     
-    const group = new THREE.Group();
-    const s = 0.6 + Math.random()*0.8;
-    
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3*s, 0.5*s, 4*s, 6), trunkMat);
-    trunk.position.y = 2*s;
-    trunk.castShadow = true;
-    group.add(trunk);
-    
-    const leaf = new THREE.Mesh(new THREE.SphereGeometry(3*s, 7, 5), leafMat);
-    leaf.position.y = 5*s;
-    leaf.castShadow = true;
-    group.add(leaf);
-    
-    group.position.set(x, h, z);
-    scene.add(group);
+    if(useBillboard && spriteMat){
+      // Billboard 精灵树（始终面向相机，低开销）
+      var sprite = new THREE.Sprite(spriteMat);
+      sprite.position.set(x, h + 8, z);
+      var scale = 1 + Math.random()*1.5;
+      sprite.scale.set(4*scale, 8*scale, 1);
+      scene.add(sprite);
+    } else {
+      // 3D 模型树（中/高性能模式）
+      const group = new THREE.Group();
+      const s = 0.6 + Math.random()*0.8;
+      
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3*s, 0.5*s, 4*s, 6), trunkMat);
+      trunk.position.y = 2*s;
+      trunk.castShadow = true;
+      group.add(trunk);
+      
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(3*s, 7, 5), leafMat);
+      leaf.position.y = 5*s;
+      leaf.castShadow = true;
+      group.add(leaf);
+      
+      group.position.set(x, h, z);
+      scene.add(group);
+    }
   }
 }
 
@@ -397,6 +462,7 @@ function buildBuildings(){
     );
     base.position.y = 1.5;
     base.castShadow = true;
+    base.frustumCulled = true; // 启用视锥体裁剪
     group.add(base);
     
     // 柱子
@@ -408,6 +474,7 @@ function buildBuildings(){
       );
       pillar.position.set(Math.cos(a)*7, 5, Math.sin(a)*7);
       pillar.castShadow = true;
+      pillar.frustumCulled = true; // 视锥体裁剪
       group.add(pillar);
     }
     
@@ -418,6 +485,7 @@ function buildBuildings(){
     );
     roof.position.y = 11;
     roof.castShadow = true;
+    roof.frustumCulled = true;
     group.add(roof);
     
     // 顶饰
@@ -426,6 +494,7 @@ function buildBuildings(){
       new THREE.MeshPhongMaterial({ color: 0xdaa520 })
     );
     top.position.y = 14;
+    top.frustumCulled = true;
     group.add(top);
     
     group.position.set(b.position.x, h, b.position.z);
@@ -436,10 +505,12 @@ function buildBuildings(){
 
 /* ============ 云朵 ============ */
 function buildClouds(){
+  var cloudCountLevel = { low: 6, medium: 10, high: 15 };
+  var count = cloudCountLevel[performanceLevel] || 10;
   const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
-  for(let i=0; i<12; i++){
+  for(let i=0; i<count; i++){
     const group = new THREE.Group();
-    const n = 3 + Math.floor(Math.random()*3);
+    const n = 2 + Math.floor(Math.random()*3);
     for(let j=0; j<n; j++){
       const s = 5 + Math.random()*8;
       const ball = new THREE.Mesh(new THREE.SphereGeometry(s, 7, 5), cloudMat);
@@ -469,14 +540,14 @@ function setupEvents(){
   cvs.addEventListener('mouseup', () => mouseDown=false);
   cvs.addEventListener('mouseleave', () => mouseDown=false);
   
-  // ===== 新增：鼠标悬停检测（非拖拽时） =====
+  // ===== 鼠标悬停检测（非拖拽时） =====
   cvs.addEventListener('mousemove', function onMove(e){
-    if(isPanelOpen) return; // 面板打开时禁用悬停检测
-    if(mouseDown) return;   // 拖拽时不检测
+    if(isPanelOpen) return;
+    if(mouseDown) return;
     handleHoverCheck(e);
   });
   
-  // ===== 新增：点击建筑 =====
+  // ===== 点击建筑 =====
   cvs.addEventListener('click', function onClick(e){
     if(isPanelOpen) return;
     handleBuildingClick(e);
@@ -509,6 +580,9 @@ function animate(){
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
   
+  // ===== FPS 计数（始终追踪，不受面板显隐影响） =====
+  fpsFrames++;
+  
   // 更新相机（第一人称）
   camera.position.copy(camPos);
   camera.rotation.order = 'YXZ';
@@ -531,6 +605,9 @@ function animate(){
   updateAdminPanel(t);
   updateMinimap();
   
+  // ===== 性能自适应评估（每10秒一次） =====
+  evaluatePerformance(t);
+  
   renderer.render(scene, camera);
 }
 
@@ -538,8 +615,9 @@ function animate(){
 function buildFireflies(){
   fireflyMeshes=[];
   fireflyData=[];
-  const count = 50 + Math.floor(Math.random()*31); // 50-80
-  const color = new THREE.Color();
+  // 按性能等级控制初始粒子数量
+  var particleCountLevel = { low: 20, medium: 40, high: 70 };
+  var count = particleCountLevel[performanceLevel] || 40;
   
   for(let i=0; i<count; i++){
     const x = (Math.random()-0.5)*280;
@@ -581,10 +659,9 @@ function animateFireflies(t){
     if(mesh.position.y > d.baseY + 2) d.baseY += 0.02;
     if(mesh.position.y < d.baseY - 2) d.baseY -= 0.02;
     
-    // 闪烁：忽明忽暗
+    // 闪烁
     const blink = 0.3 + 0.7*(0.5 + 0.5*Math.sin(t*d.blinkSpeed + d.blinkPhase));
     mesh.material.opacity = blink;
-    // 颜色偏黄绿
     mesh.material.color.setRGB(blink*1.0, blink*1.0, blink*0.4);
   });
 }
@@ -718,7 +795,7 @@ function injectPanelHTML(){
   );
   document.body.appendChild(hud);
   
-  // L2面板（重构：更灵活的结构）
+  // L2面板
   var panel = document.createElement('div');
   panel.id = 'l2-panel';
   panel.className = 'l2-panel';
@@ -733,7 +810,7 @@ function injectPanelHTML(){
     'box-shadow:0 -10px 50px rgba(0,0,0,0.5);'
   );
   
-  // 面板头部（通用）
+  // 面板头部
   panel.innerHTML = '<div class="l2-panel-header" style="'+
     'position:sticky;top:0;z-index:10;'+
     'display:flex;align-items:center;justify-content:space-between;'+
@@ -799,7 +876,7 @@ function openL2Panel(buildingId, buildingName){
     
     // 如果是市场大厅，加载商品数据
     if(buildingId === 'market') {
-      loadMarketProducts('agents'); // 默认加载Agent分类
+      loadMarketProducts('agents');
     }
     
     // 如果是博物馆，加载展览详情
@@ -857,7 +934,6 @@ function setupL2PanelEvents(buildingId){
 }
 
 function setupCoreEvents(){
-  // 核心区模块卡片点击
   var cards = document.querySelectorAll('.l2-module-card');
   cards.forEach(function(card) {
     card.addEventListener('click', function() {
@@ -867,12 +943,10 @@ function setupCoreEvents(){
       if(action === 'link') {
         window.location.href = target;
       } else if(action === 'panel') {
-        // 显示子面板（可以后续实现）
         console.log('Open sub-panel:', target);
       }
     });
     
-    // Hover效果
     card.addEventListener('mouseenter', function() {
       this.style.transform = 'translateY(-4px)';
       this.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
@@ -885,15 +959,12 @@ function setupCoreEvents(){
 }
 
 function setupMarketEvents(){
-  // 分类标签切换
   var tabs = document.querySelectorAll('.l2-tab');
   tabs.forEach(function(tab) {
     tab.addEventListener('click', function() {
-      // 更新active状态
       tabs.forEach(function(t) { t.classList.remove('active'); });
       this.classList.add('active');
       
-      // 加载对应分类的商品
       var category = this.getAttribute('data-category');
       loadMarketProducts(category);
     });
@@ -901,7 +972,6 @@ function setupMarketEvents(){
 }
 
 function setupMuseumEvents(){
-  // 展览卡片点击
   var exhibits = document.querySelectorAll('.l2-exhibit-card');
   exhibits.forEach(function(exhibit) {
     exhibit.addEventListener('click', function() {
@@ -912,7 +982,6 @@ function setupMuseumEvents(){
 }
 
 function setupSchoolEvents(){
-  // 课程报名按钮
   var buttons = document.querySelectorAll('.course-enroll-btn');
   buttons.forEach(function(btn) {
     btn.addEventListener('click', function(e) {
@@ -921,7 +990,6 @@ function setupSchoolEvents(){
     });
   });
   
-  // 课程卡片点击
   var courses = document.querySelectorAll('.l2-course-card');
   courses.forEach(function(course) {
     course.addEventListener('click', function() {
@@ -933,14 +1001,12 @@ function setupSchoolEvents(){
 
 /* ============ 数据加载函数 ============ */
 function loadMarketProducts(category) {
-  // 从JSON文件加载商品数据
   fetch('data/content-market.json')
     .then(function(res) { return res.json(); })
     .then(function(data) {
       var grid = document.getElementById('products-grid');
       if(!grid) return;
       
-      // 这里可以根据category过滤，现在先显示featured
       var products = data.featured || [];
       
       var html = '';
@@ -961,7 +1027,6 @@ function loadMarketProducts(category) {
       
       grid.innerHTML = html || '<div class="l2-empty">该分类暂无商品</div>';
       
-      // 绑定购买按钮事件
       var buyButtons = grid.querySelectorAll('.product-buy-btn');
       buyButtons.forEach(function(btn) {
         btn.addEventListener('click', function(e) {
@@ -978,7 +1043,6 @@ function loadMarketProducts(category) {
 }
 
 function loadMuseumExhibits() {
-  // 从JSON文件加载展览数据
   fetch('data/content-museum.json')
     .then(function(res) { return res.json(); })
     .then(function(data) {
@@ -1025,7 +1089,6 @@ function switchScene(sceneName, onReady){
   if(!transitionEl) transitionEl=document.getElementById('scene-transition');
   transitionEl.classList.remove('fade-in','fade-out');
   transitionEl.style.opacity='0';
-  // force reflow
   void transitionEl.offsetWidth;
   transitionEl.classList.add('fade-in');
   setTimeout(function(){
@@ -1068,22 +1131,165 @@ function toggleAdminPanel(){
 }
 
 function updateAdminPanel(t){
-  if(!adminPanelVisible) return;
-  fpsFrames++;
-  if(t-fpsLastTime>=1){
-    fpsValue=fpsFrames;
-    fpsFrames=0;
-    fpsLastTime=t;
+  // FPS 运算始终进行（每500ms更新一次），不受面板显隐影响
+  if(t - fpsLastTime >= 0.5){
+    fpsValue = Math.round(fpsFrames * 2); // 按半秒采样推算整秒
+    fpsFrames = 0;
+    fpsLastTime = t;
+    // 保存到历史队列（用于性能评估）
+    fpsHistory.push(fpsValue);
+    if(fpsHistory.length > 60) fpsHistory.shift();
   }
-  var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v};
-  set('ap-fps',fpsValue);
-  set('ap-scene',currentSceneName);
-  set('ap-cx',camPos.x.toFixed(1));
-  set('ap-cy',camPos.y.toFixed(1));
-  set('ap-cz',camPos.z.toFixed(1));
-  set('ap-yaw',(camYaw*180/Math.PI).toFixed(0)+'°');
-  set('ap-hotspots',buildingMeshes.length);
-  set('ap-webgl',window.__webglOK?'OK':'FAIL');
+  
+  // 面板可见时才更新 DOM
+  if(!adminPanelVisible) return;
+  
+  var set = function(id, v){
+    var e = document.getElementById(id);
+    if(e) e.textContent = v;
+  };
+  var perfLabel = performanceLevel === 'low' ? '🔴LOW' : (performanceLevel === 'high' ? '🟢HIGH' : '🟡MED');
+  
+  set('ap-fps', fpsValue);
+  set('ap-perf', performanceLevel.toUpperCase());
+  set('ap-scene', currentSceneName);
+  set('ap-cx', camPos.x.toFixed(1));
+  set('ap-cy', camPos.y.toFixed(1));
+  set('ap-cz', camPos.z.toFixed(1));
+  set('ap-yaw', (camYaw*180/Math.PI).toFixed(0) + '°');
+  set('ap-hotspots', buildingMeshes.length);
+  set('ap-webgl', window.__webglOK ? '✅' : '❌');
+  set('ap-particles', activeFireflyCount);
+  
+  // 更新摘要栏（格式：| FPS: 60 | 建筑: 4 | WebGL: ✅ | 粒子: 80 | 性能: MEDIUM |）
+  var summary = '| FPS: ' + fpsValue + ' | 建筑: ' + buildingMeshes.length + ' | WebGL: ' + (window.__webglOK ? '✅' : '❌') + ' | 粒子: ' + activeFireflyCount + ' | 性能: ' + perfLabel + ' |';
+  var sumEl = document.getElementById('ap-summary');
+  if(sumEl) sumEl.textContent = summary;
+}
+
+/* ============ 性能自适应评估 ============ */
+function evaluatePerformance(t){
+  // 每10秒评估一次
+  if(t - performanceEvalTimer < 10) return;
+  performanceEvalTimer = t;
+  
+  // 收集最近30帧的FPS数据，取中位数
+  var recent = fpsHistory.slice(-30);
+  if(recent.length < 5) return; // 数据不足时跳过
+  
+  var sorted = recent.slice().sort(function(a, b){ return a - b; });
+  var medianFps = sorted[Math.floor(sorted.length / 2)];
+  
+  // 根据中位数 FPS 判断性能等级
+  if(medianFps < 20){
+    // 低性能：FPS < 20 持续3秒
+    lowPerfTimer += 10;
+    if(lowPerfTimer >= 3 && performanceLevel !== 'low'){
+      prevPerfLevel = performanceLevel;
+      performanceLevel = 'low';
+      applyLowQuality();
+    }
+  } else if(medianFps > 40){
+    // 高性能：FPS > 40
+    lowPerfTimer = 0;
+    if(performanceLevel !== 'high'){
+      prevPerfLevel = performanceLevel;
+      performanceLevel = 'high';
+      applyHighQuality();
+    }
+  } else {
+    // 中性能：FPS 20-40
+    lowPerfTimer = Math.max(0, lowPerfTimer - 5);
+    if(performanceLevel !== 'medium'){
+      prevPerfLevel = performanceLevel;
+      performanceLevel = 'medium';
+      applyMediumQuality();
+    }
+  }
+}
+
+/* ============ 初始质量设置 ============ */
+function applyInitialQuality(){
+  if(!renderer) return;
+  
+  if(performanceLevel === 'low'){
+    // 低性能：关闭阴影，降低像素比
+    renderer.shadowMap.enabled = false;
+    renderer.setPixelRatio(1);
+    scene.fog = new THREE.FogExp2(0x88bbdd, 0.0015);
+  } else if(performanceLevel === 'high'){
+    // 高性能：高质量阴影与抗锯齿
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    scene.fog = new THREE.FogExp2(0x88bbdd, 0.002);
+  } else {
+    // 中性能：标准设置
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    scene.fog = new THREE.FogExp2(0x88bbdd, 0.002);
+  }
+}
+
+/* ============ 自适应质量切换 ============ */
+function applyLowQuality(){
+  console.log('[PERF] 降级到低性能模式 (FPS < 20)');
+  
+  // 减少粒子数量（隐藏2/3）
+  var hideCount = Math.floor(fireflyMeshes.length * 2 / 3);
+  for(var i = 0; i < fireflyMeshes.length; i++){
+    fireflyMeshes[i].visible = (i >= hideCount);
+  }
+  activeFireflyCount = fireflyMeshes.length - hideCount;
+  
+  // 关闭阴影
+  if(renderer) renderer.shadowMap.enabled = false;
+  
+  // 降低像素比
+  if(renderer && devicePixelRatio > 1) renderer.setPixelRatio(1);
+  
+  // 隐藏一半云朵减少渲染量
+  var hideClouds = Math.floor(clouds.length * 0.5);
+  for(var j = 0; j < clouds.length; j++){
+    clouds[j].visible = (j >= hideClouds);
+  }
+}
+
+function applyMediumQuality(){
+  console.log('[PERF] 恢复标准性能模式 (FPS 20-40)');
+  
+  // 恢复所有粒子
+  fireflyMeshes.forEach(function(m){ m.visible = true; });
+  activeFireflyCount = fireflyMeshes.length;
+  
+  // 恢复阴影
+  if(renderer){
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  }
+  
+  // 恢复所有云朵
+  clouds.forEach(function(c){ c.visible = true; });
+}
+
+function applyHighQuality(){
+  console.log('[PERF] 升级到高性能模式 (FPS > 40)');
+  
+  // 显示所有粒子
+  fireflyMeshes.forEach(function(m){ m.visible = true; });
+  activeFireflyCount = fireflyMeshes.length;
+  
+  // 高质量阴影
+  if(renderer){
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  }
+  
+  // 恢复所有云朵
+  clouds.forEach(function(c){ c.visible = true; });
 }
 
 /* ============ 小地图 ============ */
@@ -1101,7 +1307,7 @@ function updateMinimap(){
   ctx.fillStyle='rgba(10,22,40,0.9)';
   ctx.fillRect(0,0,w,h);
   // 建筑点
-  var scale=0.05; // 世界坐标→像素
+  var scale=0.05;
   var cx=w/2,cy=h/2;
   buildingMeshes.forEach(function(g){
     var dx=(g.position.x-camPos.x)*scale;
