@@ -276,6 +276,49 @@ class SceneManager {
   getRenderer() {
     return this.renderer;
   }
+
+  /**
+   * 镜头推进动画（开门后镜头穿门而入）
+   * @param {THREE.Vector3} targetPos - 目标位置（门后位置）
+   * @param {number} duration - 动画时长（毫秒）
+   * @param {Function} callback - 动画完成后回调
+   */
+  pushCamera(targetPos, duration = 3000, callback) {
+    console.log('[SceneManager] 镜头推进动画开始...');
+    const startPos = this.camera.position.clone();
+    const startTime = Date.now();
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // 缓动函数（easeInOutCubic）
+      const eased = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      
+      this.camera.position.lerpVectors(startPos, targetPos, eased);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        console.log('[SceneManager] 镜头推进动画完成');
+        if (callback) callback();
+      }
+    };
+    
+    animate();
+  }
+
+  /**
+   * 重置镜头到主场景位置
+   * @param {Function} callback - 动画完成后回调
+   */
+  resetCamera(callback) {
+    console.log('[SceneManager] 重置镜头到主场景...');
+    const targetPos = new THREE.Vector3(0, this.config.cameraHeight, 30);
+    this.pushCamera(targetPos, 2000, callback);
+  }
 }
 
 // 导出全局实例

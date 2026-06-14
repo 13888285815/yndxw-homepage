@@ -1,6 +1,7 @@
 /**
  * app.js - 五区之门3D场景主应用逻辑
  * 整合所有模块，实现完整的五区沉浸式3D体验
+ * 严格按照需求文档v2.1（§5.2）实现
  */
 
 // 主应用类
@@ -94,22 +95,174 @@ class App3D {
   }
 
   /**
-   * 进入区域：切换粒子主题，儿童区加载内部场景
+   * 进入区域：开门动画→镜头推进→内部场景（需求文档§5.2.4）
    */
   enterZone(zoneId, zoneName) {
     console.log(`[App3D] 进入区域: ${zoneName} (${zoneId})`);
+    
+    // 计算门的位置（根据五区环形布局）
+    const angle = this.getZoneAngle(zoneId);
+    const doorX = this.config.buildingDistance * Math.cos(angle);
+    const doorZ = this.config.buildingDistance * Math.sin(angle) + 3;
+    const doorPos = new THREE.Vector3(doorX, 1.5, doorZ);
+    
+    // 计算镜头推进目标位置（门后2米）
+    const direction = new THREE.Vector3(-doorX, 0, -doorZ).normalize();
+    const targetPos = doorPos.clone().add(direction.multiplyScalar(2));
+    targetPos.y = this.config.cameraHeight;
+    
+    console.log(`[App3D] 镜头推进: ${doorPos} → ${targetPos}`);
+    
+    // 隐藏门交互提示
+    document.getElementById('zone-prompt').classList.add('hidden');
+    
+    // 播放镜头推进动画（3秒）
+    this.sceneManager.pushCamera(targetPos, 3000, () => {
+      // 镜头推进完成后，显示内部场景
+      this.showInternalScene(zoneId, zoneName);
+    });
+  }
+
+  /**
+   * 根据区域ID获取角度
+   */
+  getZoneAngle(zoneId) {
+    const angles = {
+      'adult': 0,
+      'teen': (2 * Math.PI) / 5,
+      'children': (4 * Math.PI) / 5,
+      'elderly': (6 * Math.PI) / 5,
+      'accessible': (8 * Math.PI) / 5
+    };
+    return angles[zoneId] || 0;
+  }
+
+  /**
+   * 显示内部场景（3D过渡→2D界面，需求文档§5.2.5）
+   */
+  showInternalScene(zoneId, zoneName) {
+    console.log(`[App3D] 显示内部场景: ${zoneName}`);
     this.currentZone = zoneId;
 
     // 切换粒子主题
     this.switchParticleTheme(zoneId);
 
+    // 显示返回按钮
     document.getElementById('back-button').classList.remove('hidden');
 
-    if (zoneId === 'children') {
-      this.loadChildrenScene();
-    } else {
-      alert(`欢迎来到${zoneName}！\n\n（内部场景开发中...）`);
+    // 显示3D过渡场景（5秒）
+    this.showTransitionScene(zoneId, () => {
+      // 3D过渡后，显示2D界面
+      this.show2DInterface(zoneId, zoneName);
+    });
+  }
+
+  /**
+   * 显示3D过渡场景（5秒）
+   */
+  showTransitionScene(zoneId, callback) {
+    console.log(`[App3D] 3D过渡场景: ${zoneId}`);
+    // TODO: 实现各区3D过渡场景
+    // 成人区：现代办公室（5秒）
+    // 青少年区：校园场景（5秒）
+    // 儿童区：游乐场（5秒）
+    // 老年区：中式庭院（5秒）
+    // 残障友好区：无障碍建筑（5秒）
+    
+    // 当前简化：直接执行回调
+    setTimeout(callback, 5000);
+  }
+
+  /**
+   * 显示2D界面（需求文档§5.2.5）
+   */
+  show2DInterface(zoneId, zoneName) {
+    console.log(`[App3D] 显示2D界面: ${zoneName}`);
+    
+    // 创建2D界面叠加层
+    let overlay = document.getElementById('zone-2d-interface');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'zone-2d-interface';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        z-index: 1000;
+        overflow-y: auto;
+        padding: 20px;
+      `;
+      document.body.appendChild(overlay);
     }
+    
+    // 根据区域显示不同内容
+    const content = this.getZone2DContent(zoneId, zoneName);
+    overlay.innerHTML = content;
+    overlay.style.display = 'block';
+    
+    // 隐藏3D场景的canvas
+    const canvas = document.querySelector('canvas');
+    if (canvas) canvas.style.display = 'none';
+  }
+
+  /**
+   * 获取区域2D界面内容
+   */
+  getZone2DContent(zoneId, zoneName) {
+    const commonStyles = `
+      body { font-family: 'PingFang SC', sans-serif; padding: 20px; }
+      .header { display: flex; justify-content: space-between; align-items: center; }
+      .back-btn { padding: 10px 20px; background: #87CEEB; border: none; border-radius: 5px; cursor: pointer; }
+      .card { border: 1px solid #ddd; border-radius: 10px; padding: 20px; margin: 10px; }
+    `;
+    
+    const contents = {
+      'adult': `
+        <style>${commonStyles}</style>
+        <div class="header">
+          <h1>🌆 成人区 - 商业中心</h1>
+          <button class="back-btn" onclick="window.app3d.returnToMainScene()">返回</button>
+        </div>
+        <div class="card"><h3>Agent 列表</h3><p>专业工具、企业级应用...</p></div>
+      `,
+      'teen': `
+        <style>${commonStyles}</style>
+        <div class="header">
+          <h1>🎒 青少年区 - 学习中心</h1>
+          <button class="back-btn" onclick="window.app3d.returnToMainScene()">返回</button>
+        </div>
+        <div class="card"><h3>教育 Agent</h3><p>编程教育、学科辅导...</p></div>
+      `,
+      'children': `
+        <style>${commonStyles}</style>
+        <div class="header">
+          <h1>🧸 儿童区 - 游乐中心</h1>
+          <button class="back-btn" onclick="window.app3d.returnToMainScene()">返回</button>
+        </div>
+        <div class="card"><h3>互动故事</h3><p>童话世界、动画故事...</p></div>
+      `,
+      'elderly': `
+        <style>${commonStyles}</style>
+        <div class="header">
+          <h1>🏯 老年区 - 养生中心</h1>
+          <button class="back-btn" onclick="window.app3d.returnToMainScene()">返回</button>
+        </div>
+        <div class="card"><h3>大字版</h3><p>健康养生、家庭互动...</p></div>
+      `,
+      'accessible': `
+        <style>${commonStyles}</style>
+        <div class="header">
+          <h1>♿ 残障友好区 - 无障碍中心</h1>
+          <button class="back-btn" onclick="window.app3d.returnToMainScene()">返回</button>
+        </div>
+        <div class="card"><h3>高对比度</h3><p>屏幕阅读器、语音控制...</p></div>
+      `
+    };
+    
+    return contents[zoneId] || `<h1>${zoneName}</h1><button onclick="window.app3d.returnToMainScene()">返回</button>`;
   }
 
   /**
@@ -130,29 +283,31 @@ class App3D {
   }
 
   /**
-   * 儿童区内部场景（简易室内游乐场）
-   */
-  loadChildrenScene() {
-    console.log('[App3D] 加载儿童区内部场景...');
-    alert('🎠 欢迎来到儿童区！\n\n这是一个五彩缤纷的室内游乐场！\n（完整3D内部场景下一步开发）');
-    // TODO: 实际实现：
-    // 1. 摄像机动画移向门然后切换场景
-    // 2. 加载儿童区内部（彩色球体+滑梯+蹦床）
-    // 3. 更新返回按钮逻辑
-  }
-
-  /**
-   * 返回主场景：重置粒子主题
+   * 返回主场景（需求文档§5.2.4）
    */
   returnToMainScene() {
     console.log('[App3D] 返回主场景');
     this.currentZone = null;
+    
+    // 隐藏2D界面
+    const overlay = document.getElementById('zone-2d-interface');
+    if (overlay) overlay.style.display = 'none';
+    
+    // 显示3D场景的canvas
+    const canvas = document.querySelector('canvas');
+    if (canvas) canvas.style.display = 'block';
+    
+    // 隐藏返回按钮
     document.getElementById('back-button').classList.add('hidden');
-
-    // 返回主场景时重置为萤火虫主题
-    if (this.particleEffects) {
-      this.particleEffects.setTheme('firefly');
-    }
+    
+    // 重置镜头到主场景位置
+    this.sceneManager.resetCamera(() => {
+      // 镜头重置完成后，重置粒子主题
+      if (this.particleEffects) {
+        this.particleEffects.setTheme('firefly');
+      }
+      console.log('[App3D] 已返回主场景');
+    });
   }
 
   startRenderLoop() {
