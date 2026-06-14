@@ -1,230 +1,47 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-    <meta name="theme-color" content="#0a1628">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="description" content="YNDXW — 全球内容互联平台，AI驱动的3D沉浸式虚拟世界，探索未来数字生活新形态。">
-    <meta name="keywords" content="YNDXW, AI, Agent, 数字衍生品, 互联平台, 3D虚拟世界, 元宇宙, 内容互联">
-    <meta name="author" content="YNDXW">
-    <meta name="robots" content="index, follow">
-    <meta property="og:title" content="YNDXW - 全球内容互联平台">
-    <meta property="og:description" content="YNDXW — 全球内容互联平台，AI驱动的3D沉浸式虚拟世界，探索未来数字生活新形态。">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://yndxw.com">
-    <meta property="og:image" content="img/og-image.png">
-    <meta property="og:locale" content="zh_CN">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="YNDXW - 全球内容互联平台">
-    <meta name="twitter:description" content="AI驱动的3D沉浸式虚拟世界，探索未来数字生活新形态。">
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
-    <title>YNDXW - 全球内容互联平台</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>五区之门 - 未来平台</title>
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Three.js r160 本地文件 -->
+  <script src="js/lib/three.min.js"></script>
+  
+  <!-- 注意：暂时不使用OrbitControls，使用自定义第一人称控制器 -->
 </head>
 <body>
+  <!-- 加载进度条 -->
+  <div id="loading-screen">
+    <div id="loading-bar">
+      <div id="loading-progress"></div>
+    </div>
+    <div id="loading-text">正在加载五区之门...</div>
+  </div>
 
-    <!-- ============ Loading ============ -->
-    <div id="loading">
-        <div class="load-particles">
-            <div class="load-particle"></div>
-            <div class="load-particle"></div>
-            <div class="load-particle"></div>
-            <div class="load-particle"></div>
-            <div class="load-particle"></div>
-        </div>
-        <div class="load-title">YNDXW</div>
-        <div class="load-sub">全球内容互联平台</div>
-        <div class="load-progress"></div>
-        <div class="load-hint" id="load-hint">⏳ 首次加载 Three.js，请稍候...</div>
-        <div class="load-skip" id="load-skip">
-            <button class="skip-btn" id="btn-skip-3d">⏭ 跳过 3D，进入简化版</button>
-        </div>
+  <!-- 3D场景容器 -->
+  <div id="container"></div>
+
+  <!-- UI叠加层 -->
+  <div id="ui-overlay">
+    <!-- 区域名称提示 -->
+    <div id="zone-prompt" class="hidden">
+      <p id="zone-name"></p>
+      <p id="zone-hint">点击进入</p>
     </div>
 
-    <!-- ============ 3D场景 ============ -->
-    <canvas id="scene"></canvas>
+    <!-- 返回按钮 -->
+    <button id="back-button" class="hidden">返回五区之门</button>
 
-    <!-- ============ 场景过渡遮罩 ============ -->
-    <div class="scene-transition" id="scene-transition"></div>
+    <!-- FPS显示 -->
+    <div id="fps-counter" class="hidden">FPS: 0</div>
+  </div>
 
-    <!-- ============ 导航面包屑 + 小地图 ============ -->
-    <div class="nav-breadcrumb" id="nav-breadcrumb">
-      <div class="nav-breadcrumb-left">
-        <span>☁️</span>
-        <span class="scene-name" id="nav-scene-name">公共区</span>
-        <span class="sep">/</span>
-        <span id="nav-layer-label">L1</span>
-      </div>
-      <div class="nav-breadcrumb-right">
-        <div class="minimap" id="minimap"><canvas id="minimap-canvas"></canvas><div class="cam-arrow" id="minimap-arrow">▲</div></div>
-        <button class="nav-icon-btn" id="btn-settings" title="设置">⚙</button>
-      </div>
-    </div>
-
-    <!-- 底部返回按钮 -->
-    <button class="nav-back-btn" id="btn-back">▲ 返回公共区</button>
-
-    <!-- ============ 管理员调试面板 ============ -->
-    <div class="admin-panel" id="admin-panel">
-      <div class="ap-title">⚙ DEBUG</div>
-      <div class="ap-summary" id="ap-summary">| FPS: -- | 建筑: -- | WebGL: -- | 粒子: -- |</div>
-      <div class="ap-row"><span class="ap-label">FPS</span><span class="ap-val" id="ap-fps">--</span></div>
-      <div class="ap-row"><span class="ap-label">Perf</span><span class="ap-val" id="ap-perf">--</span></div>
-      <div class="ap-row"><span class="ap-label">Scene</span><span class="ap-val" id="ap-scene">--</span></div>
-      <div class="ap-row"><span class="ap-label">Cam X</span><span class="ap-val" id="ap-cx">--</span></div>
-      <div class="ap-row"><span class="ap-label">Cam Y</span><span class="ap-val" id="ap-cy">--</span></div>
-      <div class="ap-row"><span class="ap-label">Cam Z</span><span class="ap-val" id="ap-cz">--</span></div>
-      <div class="ap-row"><span class="ap-label">Yaw</span><span class="ap-val" id="ap-yaw">--</span></div>
-      <div class="ap-row"><span class="ap-label">Hotspots</span><span class="ap-val" id="ap-hotspots">--</span></div>
-      <div class="ap-row"><span class="ap-label">WebGL</span><span class="ap-val" id="ap-webgl">--</span></div>
-      <div class="ap-row"><span class="ap-label">Particles</span><span class="ap-val" id="ap-particles">--</span></div>
-    </div>
-
-    <!-- ============ UI覆盖层 ============ -->
-    <div id="ui">
-        <header>
-            <div class="logo">☁️ YNDXW</div>
-            <nav>
-                <button class="ui-btn primary" id="btn-enter">开始探索</button>
-                <button class="ui-btn ghost" id="btn-login">登录</button>
-            </nav>
-        </header>
-        <div class="hint">👁️ 第一人称视角 · 拖拽转头 · 点击建筑进入</div>
-    </div>
-
-    <!-- ============ 登录弹窗 ============ -->
-    <div id="login-modal">
-        <div class="login-box">
-            <h2>登录 YNDXW</h2>
-            <p>进入你的未来世界</p>
-            <input class="login-input" type="text" placeholder="用户名 / 邮箱" autocomplete="username">
-            <input class="login-input" type="password" placeholder="密码" autocomplete="current-password">
-            <button class="login-btn">登 录</button>
-        </div>
-    </div>
-
-    <!-- ============ L2 导航面板（占位，app.js 可按需注入内容） ============ -->
-    <!--
-    <div id="l2-view">
-        <header>L2 Panel Header</header>
-        <div class="l2-content">Content goes here</div>
-    </div>
-    -->
-
-    <!-- ============ 2D 降级内容（不支持 WebGL 时显示） ============ -->
-    <div id="fallback-2d" style="display:none;min-height:100vh;background:#0a1628;color:#e8f4f8;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;padding:40px 20px;text-align:center">
-        <div style="font-size:2.5em;margin-bottom:10px;background:linear-gradient(135deg,#7ec8e3,#4fc3f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">☁️ YNDXW</div>
-        <div style="font-size:1em;color:#7ec8e3;margin-bottom:30px;letter-spacing:2px">全球内容互联平台</div>
-        <div style="max-width:400px;margin:0 auto;display:grid;gap:16px">
-            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(126,200,227,0.12);border-radius:16px;padding:20px"><div style="font-size:2em">🏛️</div><div style="font-weight:600;margin-top:8px">核心楼阁</div><div style="color:#7ec8e3;font-size:.85em;margin-top:4px">平台核心区域</div></div>
-            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(126,200,227,0.12);border-radius:16px;padding:20px"><div style="font-size:2em">🏪</div><div style="font-weight:600;margin-top:8px">市场大厅</div><div style="color:#7ec8e3;font-size:.85em;margin-top:4px">Agent/Skill 交易市场</div></div>
-            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(126,200,227,0.12);border-radius:16px;padding:20px"><div style="font-size:2em">🏛️</div><div style="font-weight:600;margin-top:8px">博物馆</div><div style="color:#7ec8e3;font-size:.85em;margin-top:4px">知识沉淀与展示</div></div>
-            <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(126,200,227,0.12);border-radius:16px;padding:20px"><div style="font-size:2em">🎓</div><div style="font-weight:600;margin-top:8px">未来学校</div><div style="color:#7ec8e3;font-size:.85em;margin-top:4px">AI 驱动个性化学习</div></div>
-        </div>
-        <div style="margin-top:30px;color:rgba(232,244,248,0.28);font-size:.8em;letter-spacing:1px">YNDXW · 您的设备不支持 3D，已切换至简化版</div>
-    </div>
-
-    <!-- ============ WebGL 检测 & 降级逻辑 ============ -->
-    <script>
-    (function(){
-      var cv = document.createElement('canvas');
-      var gl = cv.getContext('webgl') || cv.getContext('experimental-webgl');
-      if(!gl) {
-        document.getElementById('scene').style.display = 'none';
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('ui').style.display = 'none';
-        document.getElementById('fallback-2d').style.display = 'block';
-        return;
-      }
-      window.__webglOK = true;
-
-      // 8 秒超时：3D 未渲染则切 2D 降级
-      window.__fallbackTimer = setTimeout(function(){
-        if(!window.__3DRendered && window.__webglOK) {
-          document.getElementById('scene').style.display = 'none';
-          document.getElementById('loading').style.display = 'none';
-          document.getElementById('ui').style.display = 'none';
-          document.getElementById('fallback-2d').style.display = 'block';
-        }
-      }, 8000);
-
-      // 4 秒后显示跳过按钮
-      setTimeout(function(){
-        var skipEl = document.getElementById('load-skip');
-        if(skipEl && !window.__3DRendered) {
-          skipEl.classList.add('visible');
-        }
-      }, 4000);
-
-      // 跳过 3D 功能
-      window.__skipTo2D = function(){
-        if(window.__fallbackTimer) clearTimeout(window.__fallbackTimer);
-        document.getElementById('scene').style.display = 'none';
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('ui').style.display = 'none';
-        document.getElementById('fallback-2d').style.display = 'block';
-      };
-    })();
-    </script>
-
-    <!-- ============ 脚本加载（依赖顺序：Three.js → config → app） ============ -->
-    <!--
-        已清理：OrbitControls.js、webgl-scene.js 未被任何模块引用，已移除。
-        清理清单：
-          - js/lib/OrbitControls.js  （未被 app.js import）
-          - js/lib/webgl-scene.js    （未被 index.html 引用）
-    -->
-    <script src="js/lib/three.min.js"></script>
-    <script src="js/config.js"></script>
-    <script src="js/app.js"></script>
-
-    <!-- ============ UI 交互（不依赖 Three.js，轻量） ============ -->
-    <script>
-    (function(){
-      // 跳过 3D 按钮
-      var skipBtn = document.getElementById('btn-skip-3d');
-      if(skipBtn){
-        skipBtn.addEventListener('click', function(){
-          if(window.__skipTo2D) window.__skipTo2D();
-        });
-      }
-
-      var btnEnter  = document.getElementById('btn-enter');
-      var btnLogin  = document.getElementById('btn-login');
-      var loginModal= document.getElementById('login-modal');
-      var hint      = document.querySelector('.hint');
-
-      if(btnEnter){
-        btnEnter.addEventListener('click', function(){
-          if(hint) hint.style.opacity = '1';
-        });
-      }
-      if(btnLogin){
-        btnLogin.addEventListener('click', function(){
-          loginModal.classList.toggle('show');
-        });
-      }
-      if(loginModal){
-        loginModal.addEventListener('click', function(e){
-          if(e.target === loginModal) loginModal.classList.remove('show');
-        });
-      }
-
-      // 场景就绪 → 隐藏 loading（兜底，app.js 会主动调用）
-      var hideLoad = function(){
-        var el = document.getElementById('loading');
-        if(el && !el.classList.contains('hide')) el.classList.add('hide');
-      };
-      // 等待 app.js 设置 __3DRendered（最长兜底 6s）
-      var _t = setInterval(function(){
-        if(window.__3DRendered){hideLoad();clearInterval(_t)}
-      }, 200);
-      setTimeout(function(){clearInterval(_t)}, 6000);
-    })();
-    </script>
+  <!-- 主应用脚本 -->
+  <script src="js/sceneManager.js"></script>
+  <script src="js/firstPersonController.js"></script>
+  <script src="js/doorInteraction.js"></script>
+  <script src="js/app-3d.js"></script>
 </body>
 </html>
