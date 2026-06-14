@@ -42,8 +42,22 @@
         </div>
     </div>
 
-    <!-- 脚本：先加载Three.js，再加载config.js，最后加载app.js -->
-    <script src="js/lib/three.min.js"></script>
+    <!-- WebGL检测 -->
+    <script>
+    (function(){
+      var testcanvas = document.createElement('canvas');
+      var gl = testcanvas.getContext('webgl') || testcanvas.getContext('experimental-webgl');
+      if(!gl) {
+        document.body.innerHTML = '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0a1628;color:#fff;font-family:sans-serif;text-align:center;padding:20px;flex-direction:column"><div style="font-size:3em">⚠️</div><div style="margin-top:16px;font-size:1.2em">您的设备不支持WebGL</div><div style="margin-top:8px;color:#7ec8e3;font-size:0.9em">请使用Chrome/Firefox/Edge浏览器，或更新显卡驱动</div></div>';
+        document.head.innerHTML = '<meta charset="UTF-8"><title>YNDXW - 浏览器不支持</title>';
+        document.body.style.margin = '0';
+        return;
+      }
+      window.__webglOK = true;
+    })();
+    </script>
+    <!-- 脚本：先加载Three.js（CDN优先），再加载config.js，最后加载app.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
     <script src="js/config.js"></script>
     <script>
         // 加载进度动画
@@ -58,6 +72,12 @@
                 setTimeout(()=>loading.classList.add('hide'),400);
             }
             bar.style.width=progress+'%';
+            // 如果3D加载失败超过15秒，显示提示
+            if(progress>15 && !window.__3DRendered) {
+                clearInterval(timer);
+                bar.style.background='#e66';
+                bar.parentElement.style.background='#300';
+            }
         },80);
         
         // 按钮事件

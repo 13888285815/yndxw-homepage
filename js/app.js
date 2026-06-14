@@ -106,12 +106,18 @@ function init(){
   
   // 开始动画
   animate();
+  window.__3DRendered = true;
   } catch(e) {
     console.error('[YNDXW INIT ERROR]', e.message, e.stack);
     var el = document.getElementById('loadBar');
     if(el) { el.style.width='100%'; el.style.background='#e33'; }
+    var loading = document.getElementById('loading');
+    if(loading) loading.querySelector('h2').textContent = '加载失败：' + e.message;
   }
 }
+
+// 标记渲染成功
+window.__3DRendered = true;
 
 /* ============ 地形 ============ */
 function getHeight(x, z){
