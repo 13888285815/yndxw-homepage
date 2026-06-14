@@ -13,13 +13,17 @@ class SceneManager {
     
     // 配置
     this.config = {
-      cameraHeight: 3, // 相机高度（模拟人眼高度）
+      cameraHeight: 3,
       cameraFov: 75,
       cameraNear: 0.1,
       cameraFar: 1000,
       moveSpeed: 0.5,
       mouseSensitivity: 0.002
     };
+    
+    // 性能：根据CPU核心数判断设备等级
+    this.performanceLevel = (navigator.hardwareConcurrency || 4) >= 8 ? 'high' : 'low';
+    console.log('[SceneManager] 设备性能等级:', this.performanceLevel);
   }
 
   /**
@@ -57,8 +61,11 @@ class SceneManager {
     // 添加地面
     this.addGround();
 
-    // 添加简单天空盒
-    this.addSky();
+    // 添加天空盒（大型球体）
+    this.addSkybox();
+
+    // 添加水面效果
+    this.addWater();
 
     // 监听窗口大小变化
     window.addEventListener('resize', () => this.onResize());
@@ -110,13 +117,15 @@ class SceneManager {
   }
 
   /**
-   * 添加石头装饰
+   * 添加石头装饰（性能自适应）
    */
   addRocks() {
+    const count = this.performanceLevel === 'high' ? 50 : 20;
+    console.log('[SceneManager] 添加石头:', count, '个');
     const rockGeometry = new THREE.DodecahedronGeometry(0.5, 0);
     const rockMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
     
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < count; i++) {
       const rock = new THREE.Mesh(rockGeometry, rockMaterial);
       rock.position.set(
         (Math.random() - 0.5) * 180,
@@ -134,13 +143,15 @@ class SceneManager {
   }
 
   /**
-   * 添加草丛装饰
+   * 添加草丛装饰（性能自适应）
    */
   addGrass() {
+    const count = this.performanceLevel === 'high' ? 200 : 80;
+    console.log('[SceneManager] 添加草丛:', count, '个');
     const grassGeometry = new THREE.ConeGeometry(0.1, 0.5, 4);
     const grassMaterial = new THREE.MeshLambertMaterial({ color: 0x00AA00 });
     
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < count; i++) {
       const grass = new THREE.Mesh(grassGeometry, grassMaterial);
       grass.position.set(
         (Math.random() - 0.5) * 180,
@@ -150,6 +161,45 @@ class SceneManager {
       grass.rotation.y = Math.random() * Math.PI * 2;
       this.scene.add(grass);
     }
+  }
+
+  /**
+   * 添加天空盒（大型球体，内侧渲染）
+   */
+  addSkybox() {
+    console.log('[SceneManager] 添加天空盒...');
+    const skyGeometry = new THREE.SphereGeometry(480, 32, 32);
+    const skyMaterial = new THREE.MeshBasicMaterial({
+      color: 0x87CEEB,
+      side: THREE.BackSide
+    });
+    const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+    this.scene.add(sky);
+    this.skyMesh = sky;
+    console.log('[SceneManager] 天空盒添加完成');
+  }
+
+  /**
+   * 添加水面效果（半透明平面，波浪动画在updateWater中处理）
+   */
+  addWater() {
+    console.log('[SceneManager] 添加水面...');
+    const waterGeometry = new THREE.PlaneGeometry(200, 200, 64, 64);
+    const waterMaterial = new THREE.MeshStandardMaterial({
+      color: 0x006994,
+      transparent: true,
+      opacity: 0.6,
+      roughness: 0.1,
+      metalness: 0.9
+    });
+    const water = new THREE.Mesh(waterGeometry, waterMaterial);
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = -0.3;
+    water.position.z = 80;
+    water.name = 'water';
+    this.scene.add(water);
+    this.waterMesh = water;
+    console.log('[SceneManager] 水面添加完成');
   }
 
   /**
@@ -175,6 +225,8 @@ class SceneManager {
    */
   render() {
     requestAnimationFrame(() => this.render());
+    // 更新水面动画
+    this.updateWater();
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -199,6 +251,23 @@ class SceneManager {
    */
   getCamera() {
     return this.camera;
+  }
+
+  /**
+   * 更新水面动画（每帧调用）
+   */
+  updateWater() {
+    if (!this.waterMesh) return;
+    const time = Date.now() * 0.001;
+    const pos = this.waterMesh.geometry.attributes.position.array;
+    for (let i = 1; i < pos.length; i += 3) {
+      const ox = pos[i - 1];
+      const oz = (i + 1 < pos.length) ? pos[i + 1] : 0;
+      pos[i] = Math.sin(ox * 0.03 + time * 2) * 0.4
+               + Math.cos(oz * 0.03 + time * 1.5) * 0.3;
+    }
+    this.waterMesh.geometry.attributes.position.needsUpdate = true;
+    this.waterMesh.geometry.computeVertexNormals();
   }
 
   /**
