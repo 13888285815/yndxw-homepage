@@ -296,6 +296,7 @@ function init(){
   setupPanelEvents();
   setupKeyboard();
   setupNavButtons();
+  setupLoginButton();
   updateNavUI();
   
   // 开始动画
@@ -740,6 +741,15 @@ function handleBuildingClick(e){
       obj = obj.parent;
     }
     if(obj && obj.userData.id){
+      // 检查登录状态
+      if(!window.currentUser) {
+        showLoginModal(function() {
+          switchScene(obj.userData.name, function(){
+            openL2Panel(obj.userData.id, obj.userData.name);
+          });
+        });
+        return;
+      }
       switchScene(obj.userData.name, function(){
         openL2Panel(obj.userData.id, obj.userData.name);
       });
@@ -1346,7 +1356,77 @@ function setupKeyboard(){
   });
 }
 
+/* ============ 登录系统 ============ */
+// 从localStorage恢复登录状态
+(function(){
+  try {
+    var saved = localStorage.getItem('yndxw_currentUser');
+    if(saved) window.currentUser = JSON.parse(saved);
+  } catch(e) { window.currentUser = null; }
+})();
+
+function showLoginModal(onSuccess){
+  var modal = document.getElementById('login-modal');
+  if(!modal) return;
+  modal.style.display = 'flex';
+
+  var loginBtn = modal.querySelector('.login-btn');
+  var userInput = modal.querySelector('input[type="text"]');
+  var passInput = modal.querySelector('input[type="password"]');
+  if(!loginBtn || !userInput || !passInput) return;
+
+  // 清空旧事件
+  loginBtn.onclick = null;
+
+  loginBtn.onclick = function(){
+    var username = userInput.value.trim();
+    var password = passInput.value.trim();
+    if(!username || !password) { alert('请输入用户名和密码'); return; }
+
+    // 模拟登录（实际应调用API）
+    window.currentUser = { username: username, loginTime: new Date().toISOString() };
+    localStorage.setItem('yndxw_currentUser', JSON.stringify(window.currentUser));
+
+    // 更新header按钮
+    var loginBtnHeader = document.getElementById('btn-login');
+    if(loginBtnHeader) { loginBtnHeader.textContent = '👤 ' + username; }
+
+    modal.style.display = 'none';
+    if(typeof onSuccess === 'function') onSuccess();
+  };
+
+  // 点击外部关闭
+  modal.onclick = function(e){ if(e.target === modal) hideLoginModal(); };
+}
+
+function hideLoginModal(){
+  var modal = document.getElementById('login-modal');
+  if(modal) modal.style.display = 'none';
+}
+
+function logout(){
+  window.currentUser = null;
+  localStorage.removeItem('yndxw_currentUser');
+  var loginBtnHeader = document.getElementById('btn-login');
+  if(loginBtnHeader) loginBtnHeader.textContent = '登录';
+}
+
 /* ============ 导航按钮事件 ============ */
+function setupLoginButton(){
+  var btn = document.getElementById('btn-login');
+  if(!btn) return;
+  btn.addEventListener('click', function(){
+    if(window.currentUser) {
+      // 已登录，显示用户菜单（简单实现：直接登出）
+      if(confirm('当前登录: ' + window.currentUser.username + '\n是否登出？')) {
+        logout();
+      }
+    } else {
+      showLoginModal();
+    }
+  });
+}
+
 function setupNavButtons(){
   var backBtn=document.getElementById('btn-back');
   if(backBtn){
