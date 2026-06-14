@@ -31,6 +31,10 @@ class App3D {
     this.sceneManager = window.sceneManager;
     this.sceneManager.init();
     
+    // 初始化粒子效果
+    this.particleEffects = new window.ParticleEffects(this.sceneManager.getScene());
+    this.particleEffects.init();
+    
     // 初始化第一人称控制器
     this.controller = new window.FirstPersonController(this.sceneManager.getCamera());
     
@@ -65,32 +69,32 @@ class App3D {
       {
         id: 'adult',
         name: '成人区',
-        color: 0x2196F3, // 蓝色
-        angle: 0 // 角度（弧度）
+        angle: 0, // 角度（弧度）
+        modelFunction: window.createAdultBuilding
       },
       {
         id: 'teen',
         name: '青少年区',
-        color: 0x4CAF50, // 绿色
-        angle: (2 * Math.PI) / 5 // 72度
+        angle: (2 * Math.PI) / 5, // 72度
+        modelFunction: window.createTeenBuilding
       },
       {
         id: 'children',
         name: '儿童区',
-        color: 0xFF9800, // 橙色
-        angle: (4 * Math.PI) / 5 // 144度
+        angle: (4 * Math.PI) / 5, // 144度
+        modelFunction: window.createChildrenBuilding
       },
       {
         id: 'elderly',
         name: '老年区',
-        color: 0x9C27B0, // 紫色
-        angle: (6 * Math.PI) / 5 // 216度
+        angle: (6 * Math.PI) / 5, // 216度
+        modelFunction: window.createElderlyBuilding
       },
       {
         id: 'accessible',
         name: '残障友好区',
-        color: 0xF44336, // 红色
-        angle: (8 * Math.PI) / 5 // 288度
+        angle: (8 * Math.PI) / 5, // 288度
+        modelFunction: window.createAccessibleBuilding
       }
     ];
 
@@ -99,13 +103,13 @@ class App3D {
       const x = this.config.buildingDistance * Math.cos(zone.angle);
       const z = this.config.buildingDistance * Math.sin(zone.angle);
       
-      // 创建建筑（简化版：用立方体代替）
-      const building = this.createBuilding(zone.color);
+      // 创建建筑（使用详细模型）
+      const building = zone.modelFunction();
       building.position.set(x, 0, z);
       this.sceneManager.addBuilding(building);
       
       // 创建门（简化版：用扁平立方体放在建筑前面）
-      const door = this.createDoor(zone.color);
+      const door = this.createDoor(zone.id);
       door.position.set(x, 1.5, z + 3); // 放在建筑前面
       door.lookAt(x, 1.5, z); // 门朝向中心
       
@@ -126,24 +130,25 @@ class App3D {
    * @param {number} color - 建筑颜色
    * @returns {THREE.Mesh} 建筑3D对象
    */
-  createBuilding(color) {
-    const geometry = new THREE.BoxGeometry(8, 10, 8);
-    const material = new THREE.MeshLambertMaterial({ color });
-    const building = new THREE.Mesh(geometry, material);
-    building.castShadow = true;
-    building.receiveShadow = true;
-    return building;
-  }
-
   /**
    * 创建门（简化版）
-   * @param {number} color - 门颜色
+   * @param {string} zoneId - 区域ID（用于不同颜色）
    * @returns {THREE.Mesh} 门3D对象
    */
-  createDoor(color) {
+  createDoor(zoneId) {
     const geometry = new THREE.BoxGeometry(3, 5, 0.5);
+    
+    // 不同区域不同门颜色
+    const doorColors = {
+      'adult': 0x87CEEB, // 浅蓝色
+      'teen': 0x90EE90, // 浅绿色
+      'children': 0xFFD700, // 金色
+      'elderly': 0xFFB6C1, // 浅粉色
+      'accessible': 0xFF6347 // 番茄红
+    };
+    
     const material = new THREE.MeshLambertMaterial({ 
-      color: 0xFFFFFF,
+      color: doorColors[zoneId] || 0xFFFFFF,
       emissive: 0x000000
     });
     const door = new THREE.Mesh(geometry, material);
@@ -191,6 +196,11 @@ class App3D {
       // 更新门交互
       if (this.doorInteraction) {
         this.doorInteraction.update();
+      }
+      
+      // 更新粒子效果
+      if (this.particleEffects) {
+        this.particleEffects.update();
       }
       
       // 渲染场景

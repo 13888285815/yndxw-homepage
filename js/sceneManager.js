@@ -81,29 +81,75 @@ class SceneManager {
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
     this.scene.add(directionalLight);
+
+    // 半球光（模拟天空和地面反射）
+    const hemisphereLight = new THREE.HemisphereLight(0x87CEEB, 0x3a7d44, 0.3);
+    this.scene.add(hemisphereLight);
   }
 
   /**
-   * 添加地面
+   * 添加地面（美化版）
    */
   addGround() {
+    // 主地面
     const groundGeometry = new THREE.PlaneGeometry(200, 200);
     const groundMaterial = new THREE.MeshLambertMaterial({ 
-      color: 0x3a7d44 // 绿色草地
+      color: 0x3a7d44, // 绿色草地
+      side: THREE.DoubleSide
     });
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     this.scene.add(ground);
+
+    // 添加石头装饰
+    this.addRocks();
+
+    // 添加草丛装饰
+    this.addGrass();
   }
 
   /**
-   * 添加简单天空盒
+   * 添加石头装饰
    */
-  addSky() {
-    // 使用半球光模拟天空光照
-    const hemisphereLight = new THREE.HemisphereLight(0x87CEEB, 0x3a7d44, 0.3);
-    this.scene.add(hemisphereLight);
+  addRocks() {
+    const rockGeometry = new THREE.DodecahedronGeometry(0.5, 0);
+    const rockMaterial = new THREE.MeshLambertMaterial({ color: 0x808080 });
+    
+    for (let i = 0; i < 50; i++) {
+      const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+      rock.position.set(
+        (Math.random() - 0.5) * 180,
+        0.3,
+        (Math.random() - 0.5) * 180
+      );
+      rock.scale.set(
+        Math.random() * 0.5 + 0.5,
+        Math.random() * 0.5 + 0.5,
+        Math.random() * 0.5 + 0.5
+      );
+      rock.castShadow = true;
+      this.scene.add(rock);
+    }
+  }
+
+  /**
+   * 添加草丛装饰
+   */
+  addGrass() {
+    const grassGeometry = new THREE.ConeGeometry(0.1, 0.5, 4);
+    const grassMaterial = new THREE.MeshLambertMaterial({ color: 0x00AA00 });
+    
+    for (let i = 0; i < 200; i++) {
+      const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+      grass.position.set(
+        (Math.random() - 0.5) * 180,
+        0.25,
+        (Math.random() - 0.5) * 180
+      );
+      grass.rotation.y = Math.random() * Math.PI * 2;
+      this.scene.add(grass);
+    }
   }
 
   /**
