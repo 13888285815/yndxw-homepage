@@ -5,6 +5,15 @@
 (function(){
 'use strict';
 
+// 全局错误捕获
+window.addEventListener('error', function(e){
+  var msg = '[YNDXW ERROR] ' + (e.message || 'unknown');
+  if(e.lineno) msg += ' (line:' + e.lineno + ' col:' + (e.colno||'?') + ')';
+  console.error(msg);
+  var el = document.getElementById('loadBar');
+  if(el) el.style.background = '#e33';
+});
+
 /* ============ Simplex Noise ============ */
 class SimplexNoise{
   constructor(){
@@ -50,11 +59,12 @@ let mouseDown=false, lastX=0, lastY=0;
 
 /* ============ 初始化 ============ */
 function init(){
+  try {
   clock = new THREE.Clock();
   
   // 场景
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87CEEB); // 直接天蓝色背景，确保不是黑的
+  scene.background = new THREE.Color(0x87CEEB);
   scene.fog = new THREE.FogExp2(0x88bbdd, 0.002);
   
   // 相机
@@ -96,6 +106,11 @@ function init(){
   
   // 开始动画
   animate();
+  } catch(e) {
+    console.error('[YNDXW INIT ERROR]', e.message, e.stack);
+    var el = document.getElementById('loadBar');
+    if(el) { el.style.width='100%'; el.style.background='#e33'; }
+  }
 }
 
 /* ============ 地形 ============ */
