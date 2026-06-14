@@ -22,6 +22,43 @@ class App3D {
     console.log('[App3D] 初始化五区之门3D场景...');
     this.showLoading();
 
+    // 1. WebGL检测（需求文档§5.2.6）
+    const webglInfo = window.SceneLoader.checkWebGLSupport();
+    if (!webglInfo.supported) {
+      console.warn('[App3D] WebGL不支持，降级到2D界面');
+      this.showFallback2D();
+      return;
+    }
+
+    // 2. 场景加载器（需求文档§5.2.6第4模块）
+    this.sceneLoader = new window.SceneLoader();
+
+    // 3. 预加载主场景（门模型优先）
+    this.sceneLoader.preloadMainScene(
+      (progress) => {
+        // 更新加载进度条
+        document.getElementById('loading-progress').style.width = `${progress * 100}%`;
+        document.getElementById('loading-text').textContent = `正在加载五区之门... ${Math.round(progress * 100)}%`;
+      },
+      () => {
+        // 主场景加载完成，初始化3D场景
+        this.init3DScene();
+      },
+      () => {
+        // 加载超时，降级到2D
+        this.showFallback2D();
+      }
+    );
+
+    this.initUIEvents();
+  }
+
+  /**
+   * 初始化3D场景（主场景加载完成后调用）
+   */
+  init3DScene() {
+    console.log('[App3D] 初始化3D场景...');
+
     this.sceneManager = window.sceneManager;
     this.sceneManager.init();
 
@@ -37,11 +74,51 @@ class App3D {
 
     this.createFiveZones();
 
-    setTimeout(() => this.hideLoading(), this.config.loadingDuration);
+    setTimeout(() => this.hideLoading(), 500);
     this.startRenderLoop();
-    this.initUIEvents();
 
-    console.log('[App3D] 初始化完成！');
+    console.log('[App3D] 3D场景初始化完成！');
+  }
+
+  /**
+   * 显示2D降级界面（WebGL不支持或加载超时）
+   */
+  showFallback2D() {
+    console.log('[App3D] 显示2D降级界面');
+    const loadingScreen = document.getElementById('loading-screen');
+    loadingScreen.style.display = 'none';
+
+    // 创建2D降级界面
+    const fallback = document.createElement('div');
+    fallback.id = 'fallback-2d';
+    fallback.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(135deg, #87CEEB 0%, #E0F7FA 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-family: 'PingFang SC', sans-serif; padding: 20px;
+    `;
+    fallback.innerHTML = `
+      <h1 style="font-size: 32px; color: #333;">五区之门</h1>
+      <p style="font-size: 16px; color: #666; margin: 20px 0;">您的设备不支持3D场景，已自动切换到2D导航模式</p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; max-width: 800px;">
+        <div style="background: #fff; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="font-size: 40px;">🌆</div><h3>成人区</h3><p>商业中心</p>
+        </div>
+        <div style="background: #fff; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="font-size: 40px;">🎒</div><h3>青少年区</h3><p>学习中心</p>
+        </div>
+        <div style="background: #fff; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="font-size: 40px;">🧸</div><h3>儿童区</h3><p>游乐中心</p>
+        </div>
+        <div style="background: #fff; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="font-size: 40px;">🏯</div><h3>老年区</h3><p>养生中心</p>
+        </div>
+        <div style="background: #fff; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="font-size: 40px;">♿</div><h3>残障友好区</h3><p>无障碍中心</p>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(fallback);
   }
 
   createFiveZones() {
@@ -162,15 +239,20 @@ class App3D {
    */
   showTransitionScene(zoneId, callback) {
     console.log(`[App3D] 3D过渡场景: ${zoneId}`);
-    // TODO: 实现各区3D过渡场景
-    // 成人区：现代办公室（5秒）
-    // 青少年区：校园场景（5秒）
-    // 儿童区：游乐场（5秒）
-    // 老年区：中式庭院（5秒）
-    // 残障友好区：无障碍建筑（5秒）
     
-    // 当前简化：直接执行回调
-    setTimeout(callback, 5000);
+    // 使用场景加载器按需加载（需求文档§5.2.7：点击门后再加载）
+    this.sceneLoader.loadZoneScene(zoneId,
+      (progress) => console.log(`[App3D] 区域加载进度: ${progress * 100}%`),
+      () => {
+        // 加载完成，5秒3D过渡后切换2D
+        setTimeout(callback, 5000);
+      },
+      () => {
+        // 加载超时，直接显示2D界面
+        console.warn(`[App3D] 区域 ${zoneId} 加载超时，直接显示2D`);
+        callback();
+      }
+    );
   }
 
   /**
