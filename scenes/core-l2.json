@@ -1,0 +1,66 @@
+{
+  "id": "core-l2",
+  "name": "核心楼阁",
+  "level": "L2",
+  "type": "panel",
+  "parent": "public-l1",
+  "background": {
+    "type": "gradient",
+    "value": "linear-gradient(180deg, #1a2a3a 0%, #0d1820 100%)"
+  },
+  "layout": {
+    "columns": 3,
+    "gap": 20,
+    "padding": 40
+  },
+  "sections": [
+    {
+      "id": "market",
+      "name": "市场",
+      "icon": "🏪",
+      "color": "#6366f1",
+      "target": "/market",
+      "description": "浏览和购买Agent、Skill、数字产品"
+    },
+    {
+      "id": "agents",
+      "name": "Agent",
+      "icon": "🤖",
+      "color": "#8b5cf6",
+      "target": "/agents",
+      "description": "发现和部署强大的AI Agent"
+    },
+    {
+      "id": "skills",
+      "name": "Skills",
+      "icon": "🛠️",
+      "color": "#10b981",
+      "target": "/skills",
+      "description": "扩展Agent能力的技能包"
+    },
+    {
+      "id": "docs",
+      "name": "文档",
+      "icon": "📚",
+      "color": "#f59e0b",
+      "target": "/docs",
+      "description": "平台使用指南和API文档"
+    },
+    {
+      "id": "tools",
+      "name": "工具箱",
+      "icon": "🔧",
+      "color": "#3b82f6",
+      "target": "https://tools.yndxw.com",
+      "description": "实用工具集合，提升工作效率"
+    },
+    {
+      "id": "vault",
+      "name": "核心区",
+      "icon": "🔐",
+      "color": "#ef4444",
+      "target": "/vault",
+      "description": "会员专属区域，解锁高级功能"
+    }
+  ]
+}

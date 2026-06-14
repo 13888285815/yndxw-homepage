@@ -29,6 +29,39 @@
     <!-- ============ 3D场景 ============ -->
     <canvas id="scene"></canvas>
 
+    <!-- ============ 场景过渡遮罩 ============ -->
+    <div class="scene-transition" id="scene-transition"></div>
+
+    <!-- ============ 导航面包屑 + 小地图 ============ -->
+    <div class="nav-breadcrumb" id="nav-breadcrumb">
+      <div class="nav-breadcrumb-left">
+        <span>☁️</span>
+        <span class="scene-name" id="nav-scene-name">公共区</span>
+        <span class="sep">/</span>
+        <span id="nav-layer-label">L1</span>
+      </div>
+      <div class="nav-breadcrumb-right">
+        <div class="minimap" id="minimap"><canvas id="minimap-canvas"></canvas><div class="cam-arrow" id="minimap-arrow">▲</div></div>
+        <button class="nav-icon-btn" id="btn-settings" title="设置">⚙</button>
+      </div>
+    </div>
+
+    <!-- 底部返回按钮 -->
+    <button class="nav-back-btn" id="btn-back">▲ 返回公共区</button>
+
+    <!-- ============ 管理员调试面板 ============ -->
+    <div class="admin-panel" id="admin-panel">
+      <div class="ap-title">⚙ DEBUG</div>
+      <div class="ap-row"><span class="ap-label">FPS</span><span class="ap-val" id="ap-fps">--</span></div>
+      <div class="ap-row"><span class="ap-label">Scene</span><span class="ap-val" id="ap-scene">--</span></div>
+      <div class="ap-row"><span class="ap-label">Cam X</span><span class="ap-val" id="ap-cx">--</span></div>
+      <div class="ap-row"><span class="ap-label">Cam Y</span><span class="ap-val" id="ap-cy">--</span></div>
+      <div class="ap-row"><span class="ap-label">Cam Z</span><span class="ap-val" id="ap-cz">--</span></div>
+      <div class="ap-row"><span class="ap-label">Yaw</span><span class="ap-val" id="ap-yaw">--</span></div>
+      <div class="ap-row"><span class="ap-label">Hotspots</span><span class="ap-val" id="ap-hotspots">--</span></div>
+      <div class="ap-row"><span class="ap-label">WebGL</span><span class="ap-val" id="ap-webgl">--</span></div>
+    </div>
+
     <!-- ============ UI覆盖层 ============ -->
     <div id="ui">
         <header>
@@ -109,6 +142,18 @@
     <script src="js/lib/three.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/app.js"></script>
+
+    <!-- ============ L2 面板容器（由 app.js 控制显示） ============ -->
+    <div id="l2-panel" style="display:none;">
+        <button id="btn-back" class="l2-btn-back" aria-label="返回公共区">← 返回</button>
+        <div id="minimap" class="minimap-container"></div>
+        <h1 id="scene-title" class="scene-title"></h1>
+        <div id="admin-panel" class="admin-panel" style="display:none;">
+            <h3>管理员面板</h3>
+            <div class="admin-info"></div>
+        </div>
+        <div id="l2-content" class="l2-content"></div>
+    </div>
 
     <!-- ============ UI 交互（不依赖 Three.js，轻量） ============ -->
     <script>

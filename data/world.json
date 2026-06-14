@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "siteName": "YNDXW - 全球内容互联平台",
+  "language": "zh-CN",
+  "backgroundColor": "#0a0a1a",
+  "fogDensity": 0.012,
+  "scenes": {
+    "public": "public-l1",
+    "core": "core-l2",
+    "market": "market-l2",
+    "museum": "museum-l2",
+    "school": "school-l2"
+  },
+  "admin": {
+    "enabled": true,
+    "debug": true,
+    "showFPS": false
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "id": "public-l1",
+  "name": "公共区",
+  "level": "L1",
+  "type": "3d",
+  "camera": {
+    "initialPosition": {
+      "x": 0,
+      "y": 5,
+      "z": 80
+    },
+    "theta": 0.785,
+    "phi": 0.565,
+    "dist": 120,
+    "minDist": 20,
+    "maxDist": 200
+  },
+  "environment": {
+    "terrain": {
+      "size": 500,
+      "segments": 200,
+      "noise": {
+        "freq1": 0.003,
+        "amp1": 40,
+        "freq2": 0.008,
+        "amp2": 20,
+        "freq3": 0.025,
+        "amp3": 6
+      }
+    },
+    "water": {
+      "y": -2,
+      "color": "#3388aa",
+      "opacity": 0.7
+    },
+    "sky": {
+      "topColor": "#1a3a5c",
+      "midColor": "#4a90c2",
+      "horizonColor": "#87CEEB",
+      "groundColor": "#f0d8a8"
+    },
+    "fog": {
+      "color": "#87CEEB",
+      "near": 50,
+      "far": 300,
+      "density": 0.012
+    }
+  },
+  "decorations": {
+    "trees": {
+      "count": 80,
+      "minHeight": -3,
+      "maxHeight": 30
+    },
+    "clouds": {
+      "count": 15,
+      "heightMin": 80,
+      "heightMax": 140,
+      "speedMin": 0.1,
+      "speedMax": 0.4
+    }
+  },
+  "hotspots": [
+    {
+      "id": "pavilion",
+      "name": "核心楼阁",
+      "nameEn": "Core Pavilion",
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "type": "L2_entrance",
+      "target": "core-l2",
+      "description": "平台核心区域，导航中心",
+      "icon": "🏛️"
+    },
+    {
+      "id": "market",
+      "name": "市场大厅",
+      "nameEn": "Market Hall",
+      "position": {
+        "x": 80,
+        "y": 0,
+        "z": 50
+      },
+      "type": "L2_entrance",
+      "target": "market-l2",
+      "description": "Agent/Skill交易市场",
+      "icon": "🏪"
+    },
+    {
+      "id": "museum",
+      "name": "博物馆",
+      "nameEn": "Museum",
+      "position": {
+        "x": -70,
+        "y": 0,
+        "z": 60
+      },
+      "type": "L2_entrance",
+      "target": "museum-l2",
+      "description": "数字内容展示与展览",
+      "icon": "🏛️"
+    },
+    {
+      "id": "school",
+      "name": "未来学校",
+      "nameEn": "Future School",
+      "position": {
+        "x": 60,
+        "y": 0,
+        "z": -70
+      },
+      "type": "L2_entrance",
+      "target": "school-l2",
+      "description": "互动学习空间",
+      "icon": "🎓"
+    }
+  ]
+}

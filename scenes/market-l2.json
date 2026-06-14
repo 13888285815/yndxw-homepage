@@ -1,0 +1,82 @@
+{
+  "id": "market-l2",
+  "name": "市场大厅",
+  "level": "L2",
+  "type": "panel",
+  "parent": "public-l1",
+  "description": "浏览和购买Agent、Skill、数字产品",
+  "background": {
+    "type": "gradient",
+    "value": "linear-gradient(135deg, #1e1e2e 0%, #2d2d44 50%, #1e1e2e 100%)"
+  },
+  "layout": {
+    "showCategories": true,
+    "showFeatured": true,
+    "columns": 4,
+    "gap": 16
+  },
+  "categories": [
+    {
+      "id": "agents",
+      "name": "Agent市场",
+      "icon": "🤖",
+      "description": "发现并部署强大的AI Agent"
+    },
+    {
+      "id": "skills",
+      "name": "Skills市场",
+      "icon": "🛠️",
+      "description": "扩展Agent能力的技能包"
+    },
+    {
+      "id": "templates",
+      "name": "模板市场",
+      "icon": "📝",
+      "description": "快速启动项目的专业模板"
+    },
+    {
+      "id": "themes",
+      "name": "主题市场",
+      "icon": "🎨",
+      "description": "个性化你的数字空间"
+    }
+  ],
+  "featured": [
+    {
+      "id": "featured-1",
+      "title": "Vibe Coding Agent",
+      "description": "AI辅助编程，提升10倍开发效率",
+      "icon": "💡",
+      "price": 99,
+      "rating": 4.9,
+      "author": "YNDXW AI Lab"
+    },
+    {
+      "id": "featured-2",
+      "title": "智能客服Skill",
+      "description": "7x24小时自动客服，支持多语言",
+      "icon": "🎧",
+      "price": 49,
+      "rating": 4.8,
+      "author": "QClaw Team"
+    },
+    {
+      "id": "featured-3",
+      "title": "企业官网模板",
+      "description": "响应式设计，5分钟上线",
+      "icon": "🌐",
+      "price": 199,
+      "rating": 4.7,
+      "author": "Template Master"
+    },
+    {
+      "id": "featured-4",
+      "title": "赛博朋克主题包",
+      "description": "未来感界面，霓虹灯效果",
+      "icon": "🌃",
+      "price": 29,
+      "rating": 4.9,
+      "author": "Design Pro"
+    }
+  ]
+}

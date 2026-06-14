@@ -1,0 +1,40 @@
+{
+  "id": "museum-l2",
+  "name": "博物馆",
+  "level": "L2",
+  "type": "panel",
+  "parent": "public-l1",
+  "description": "探索数字世界的历史与未来",
+  "background": {
+    "type": "gradient",
+    "value": "linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)"
+  },
+  "layout": {
+    "showExhibits": true,
+    "columns": 3,
+    "gap": 24
+  },
+  "exhibits": [
+    {
+      "id": "history",
+      "name": "平台历史",
+      "icon": "📜",
+      "description": "探索YNDXW从概念到现实的演进历程",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "tech",
+      "name": "技术架构",
+      "icon": "🏗️",
+      "description": "深入了解支撑虚拟世界的底层技术",
+      "color": "#3b82f6"
+    },
+    {
+      "id": "cases",
+      "name": "案例展示",
+      "icon": "🎯",
+      "description": "见证YNDXW在各领域的创新应用",
+      "color": "#10b981"
+    }
+  ]
+}

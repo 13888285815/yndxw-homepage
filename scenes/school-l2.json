@@ -1,0 +1,55 @@
+{
+  "id": "school-l2",
+  "name": "未来学校",
+  "level": "L2",
+  "type": "panel",
+  "parent": "public-l1",
+  "description": "互动学习，提升技能",
+  "background": {
+    "type": "gradient",
+    "value": "linear-gradient(135deg, #1e3a5f 0%, #2d1b69 50%, #1a1a2e 100%)"
+  },
+  "layout": {
+    "showCourses": true,
+    "columns": 3,
+    "gap": 20
+  },
+  "courses": [
+    {
+      "id": "vibe",
+      "name": "Vibe Coding",
+      "icon": "💡",
+      "description": "掌握AI辅助编程的精髓，让代码自己写代码",
+      "instructor": "YNDXW AI Lab",
+      "duration": "6周",
+      "level": "中级",
+      "students": 1234,
+      "rating": 4.9,
+      "enrolled": false
+    },
+    {
+      "id": "agent",
+      "name": "Agent开发",
+      "icon": "🤖",
+      "description": "从零开始构建智能Agent，掌握下一代人机交互",
+      "instructor": "QClaw Team",
+      "duration": "8周",
+      "level": "高级",
+      "students": 856,
+      "rating": 4.8,
+      "enrolled": false
+    },
+    {
+      "id": "deploy",
+      "name": "部署运维",
+      "icon": "🚀",
+      "description": "让您的AI应用稳定运行，服务百万用户",
+      "instructor": "DevOps Master",
+      "duration": "4周",
+      "level": "中级",
+      "students": 645,
+      "rating": 4.7,
+      "enrolled": false
+    }
+  ]
+}

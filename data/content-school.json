@@ -1,0 +1,58 @@
+{
+  "courses": [
+    {
+      "id": "vibe",
+      "name": "Vibe Coding",
+      "icon": "💡",
+      "description": "掌握AI辅助编程的精髓，让代码自己写代码",
+      "instructor": "YNDXW AI Lab",
+      "duration": "6周",
+      "level": "中级",
+      "students": 1234,
+      "rating": 4.9,
+      "topics": [
+        "AI编程助手的选择与配置",
+        "Prompt Engineering for Code Generation",
+        "代码审查与质量保证",
+        "自动化测试与部署",
+        "实战项目：从0到1开发Agent"
+      ]
+    },
+    {
+      "id": "agent",
+      "name": "Agent开发",
+      "icon": "🤖",
+      "description": "从零开始构建智能Agent，掌握下一代人机交互",
+      "instructor": "QClaw Team",
+      "duration": "8周",
+      "level": "高级",
+      "students": 856,
+      "rating": 4.8,
+      "topics": [
+        "Agent架构设计",
+        "自然语言理解（NLU）",
+        "任务规划与执行",
+        "多Agent协作",
+        "实战项目：企业级Agent部署"
+      ]
+    },
+    {
+      "id": "deploy",
+      "name": "部署运维",
+      "icon": "🚀",
+      "description": "让您的AI应用稳定运行，服务百万用户",
+      "instructor": "DevOps Master",
+      "duration": "4周",
+      "level": "中级",
+      "students": 645,
+      "rating": 4.7,
+      "topics": [
+        "容器化与编排（Docker + K8s）",
+        "CI/CD流水线搭建",
+        "监控与日志分析",
+        "成本优化与性能调优",
+        "实战项目：高可用架构设计"
+      ]
+    }
+  ]
+}

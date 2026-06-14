@@ -63,6 +63,14 @@ let fireflyData=[];
 let isPanelOpen=false;
 let activeBuildingId=null;
 
+// ===== 新增：场景过渡 + 导航 + 管理员面板 =====
+let currentSceneName='公共区';
+let isTransitioning=false;
+let adminPanelVisible=false;
+let hudVisible=true;
+let fpsFrames=0, fpsLastTime=0, fpsValue=0;
+let transitionEl=null;
+
 // 高亮用的边缘光材质（按building id存储）
 const buildingOutlineMaterials={};
 
@@ -129,6 +137,9 @@ function init(){
   // 事件
   setupEvents();
   setupPanelEvents();
+  setupKeyboard();
+  setupNavButtons();
+  updateNavUI();
   
   // 开始动画
   animate();
@@ -374,6 +385,10 @@ function animate(){
   // ===== 萤火虫闪烁动画 =====
   animateFireflies(t);
   
+  // ===== 管理员面板 + 小地图实时更新 =====
+  updateAdminPanel(t);
+  updateMinimap();
+  
   renderer.render(scene, camera);
 }
 
@@ -506,7 +521,9 @@ function handleBuildingClick(e){
       obj = obj.parent;
     }
     if(obj && obj.userData.id){
-      openL2Panel(obj.userData.id, obj.userData.name);
+      switchScene(obj.userData.name, function(){
+        openL2Panel(obj.userData.id, obj.userData.name);
+      });
     }
   }
 }
@@ -658,6 +675,145 @@ function setupPanelEvents(){
       closeL2Panel();
     }
   });
+}
+
+/* ============ 场景过渡动画 ============ */
+function switchScene(sceneName, onReady){
+  if(isTransitioning) return;
+  isTransitioning=true;
+  if(!transitionEl) transitionEl=document.getElementById('scene-transition');
+  transitionEl.classList.remove('fade-in','fade-out');
+  transitionEl.style.opacity='0';
+  // force reflow
+  void transitionEl.offsetWidth;
+  transitionEl.classList.add('fade-in');
+  setTimeout(function(){
+    currentSceneName=sceneName;
+    currentLayer=sceneName==='公共区'?'L1':'L2';
+    updateNavUI();
+    if(onReady) onReady();
+    transitionEl.classList.remove('fade-in');
+    void transitionEl.offsetWidth;
+    transitionEl.classList.add('fade-out');
+    setTimeout(function(){
+      transitionEl.classList.remove('fade-out');
+      transitionEl.style.opacity='0';
+      isTransitioning=false;
+    },500);
+  },500);
+}
+
+/* ============ 导航UI更新 ============ */
+function updateNavUI(){
+  var nameEl=document.getElementById('nav-scene-name');
+  var layerEl=document.getElementById('nav-layer-label');
+  var backBtn=document.getElementById('btn-back');
+  if(nameEl) nameEl.textContent=currentSceneName;
+  if(layerEl) layerEl.textContent=currentLayer;
+  if(backBtn){
+    if(currentLayer==='L2') backBtn.classList.add('visible');
+    else backBtn.classList.remove('visible');
+  }
+}
+
+/* ============ 管理员面板 ============ */
+function toggleAdminPanel(){
+  adminPanelVisible=!adminPanelVisible;
+  var el=document.getElementById('admin-panel');
+  if(el){
+    if(adminPanelVisible) el.classList.add('visible');
+    else el.classList.remove('visible');
+  }
+}
+
+function updateAdminPanel(t){
+  if(!adminPanelVisible) return;
+  fpsFrames++;
+  if(t-fpsLastTime>=1){
+    fpsValue=fpsFrames;
+    fpsFrames=0;
+    fpsLastTime=t;
+  }
+  var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v};
+  set('ap-fps',fpsValue);
+  set('ap-scene',currentSceneName);
+  set('ap-cx',camPos.x.toFixed(1));
+  set('ap-cy',camPos.y.toFixed(1));
+  set('ap-cz',camPos.z.toFixed(1));
+  set('ap-yaw',(camYaw*180/Math.PI).toFixed(0)+'°');
+  set('ap-hotspots',buildingMeshes.length);
+  set('ap-webgl',window.__webglOK?'OK':'FAIL');
+}
+
+/* ============ 小地图 ============ */
+function updateMinimap(){
+  var canvas=document.getElementById('minimap-canvas');
+  var arrow=document.getElementById('minimap-arrow');
+  if(!canvas||!arrow) return;
+  var ctx=canvas.getContext('2d');
+  if(!ctx) return;
+  var w=40,h=40;
+  if(canvas.width!==w*2) canvas.width=w*2;
+  if(canvas.height!==h*2) canvas.height=h*2;
+  ctx.setTransform(2,0,0,2,0,0);
+  // 背景
+  ctx.fillStyle='rgba(10,22,40,0.9)';
+  ctx.fillRect(0,0,w,h);
+  // 建筑点
+  var scale=0.05; // 世界坐标→像素
+  var cx=w/2,cy=h/2;
+  buildingMeshes.forEach(function(g){
+    var dx=(g.position.x-camPos.x)*scale;
+    var dz=(g.position.z-camPos.z)*scale;
+    var rx=Math.cos(camYaw)*dx-Math.sin(camYaw)*dz;
+    var ry=Math.sin(camYaw)*dx+Math.cos(camYaw)*dz;
+    var sx=cx+rx,sy=cy+ry;
+    if(sx<0||sx>w||sy<0||sy>h) return;
+    ctx.fillStyle='rgba(126,200,227,0.6)';
+    ctx.beginPath();ctx.arc(sx,sy,2,0,Math.PI*2);ctx.fill();
+  });
+  // 相机箭头方向
+  arrow.style.setProperty('--cam-yaw',((-camYaw*180/Math.PI)).toFixed(0)+'deg');
+}
+
+/* ============ 键盘快捷键 ============ */
+function setupKeyboard(){
+  document.addEventListener('keydown',function(e){
+    // ~ 或 Ctrl+Shift+D → admin面板
+    if(e.key==='`'||e.key==='~'||(e.ctrlKey&&e.shiftKey&&(e.key==='D'||e.key==='d'))){
+      e.preventDefault();
+      toggleAdminPanel();
+      return;
+    }
+    // Escape → 关闭L2面板/返回L1
+    if(e.key==='Escape'){
+      if(isPanelOpen){closeL2Panel();return}
+      if(currentLayer==='L2'){switchScene('公共区');return}
+    }
+    // H → HUD显隐
+    if(e.key==='h'||e.key==='H'){
+      if(document.activeElement&&document.activeElement.tagName==='INPUT') return;
+      hudVisible=!hudVisible;
+      document.body.classList.toggle('hud-hidden',!hudVisible);
+    }
+  });
+}
+
+/* ============ 导航按钮事件 ============ */
+function setupNavButtons(){
+  var backBtn=document.getElementById('btn-back');
+  if(backBtn){
+    backBtn.addEventListener('click',function(){
+      closeL2Panel();
+      switchScene('公共区');
+    });
+  }
+  var settingsBtn=document.getElementById('btn-settings');
+  if(settingsBtn){
+    settingsBtn.addEventListener('click',function(){
+      toggleAdminPanel();
+    });
+  }
 }
 
 /* ============ 启动 ============ */

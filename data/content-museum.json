@@ -1,0 +1,64 @@
+{
+  "exhibits": [
+    {
+      "id": "history",
+      "name": "平台历史",
+      "icon": "📜",
+      "description": "探索YNDXW从概念到现实的演进历程",
+      "sections": [
+        {
+          "title": "起源故事",
+          "content": "2024年，一群梦想家汇聚，立志打造全球首个AI驱动的3D虚拟世界平台。"
+        },
+        {
+          "title": "技术里程碑",
+          "content": "从WebGL原型到Three.js生产环境，从静态场景到动态交互，每一步都凝聚着创新。"
+        },
+        {
+          "title": "社区成长",
+          "content": "从100个内测用户到10000+活跃创作者，YNDXW正在成为数字内容的新家园。"
+        }
+      ]
+    },
+    {
+      "id": "tech",
+      "name": "技术架构",
+      "icon": "🏗️",
+      "description": "深入了解支撑虚拟世界的底层技术",
+      "sections": [
+        {
+          "title": "前端渲染引擎",
+          "content": "基于Three.js构建，支持PBR材质、动态光照、粒子系统，帧率稳定在60fps。"
+        },
+        {
+          "title": "JSON驱动架构",
+          "content": "场景配置、内容数据全部JSON化，支持热更新、A/B测试、动态加载。"
+        },
+        {
+          "title": "AI集成层",
+          "content": "QClaw引擎驱动，支持自然语言交互、智能NPC、自适应场景生成。"
+        }
+      ]
+    },
+    {
+      "id": "cases",
+      "name": "案例展示",
+      "icon": "🎯",
+      "description": "见证YNDXW在各领域的创新应用",
+      "sections": [
+        {
+          "title": "虚拟会议空间",
+          "content": "某跨国企业使用YNDXW搭建虚拟总部，支持500人同时在线协作。"
+        },
+        {
+          "title": "在线教育平台",
+          "content": "未来学校已开设30+门课程，学员 completion 率达85%。"
+        },
+        {
+          "title": "数字艺术展览",
+          "content": "博物馆举办的首届NFT艺术展， attracted 10000+ visitors in 一周。"
+        }
+      ]
+    }
+  ]
+}
