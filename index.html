@@ -7,6 +7,21 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="description" content="YNDXW — 全球内容互联平台，AI驱动的3D沉浸式虚拟世界，探索未来数字生活新形态。">
+    <meta name="keywords" content="YNDXW, AI, Agent, 数字衍生品, 互联平台, 3D虚拟世界, 元宇宙, 内容互联">
+    <meta name="author" content="YNDXW">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="YNDXW - 全球内容互联平台">
+    <meta property="og:description" content="YNDXW — 全球内容互联平台，AI驱动的3D沉浸式虚拟世界，探索未来数字生活新形态。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://yndxw.com">
+    <meta property="og:image" content="img/og-image.png">
+    <meta property="og:locale" content="zh_CN">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="YNDXW - 全球内容互联平台">
+    <meta name="twitter:description" content="AI驱动的3D沉浸式虚拟世界，探索未来数字生活新形态。">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
     <title>YNDXW - 全球内容互联平台</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -24,6 +39,10 @@
         <div class="load-title">YNDXW</div>
         <div class="load-sub">全球内容互联平台</div>
         <div class="load-progress"></div>
+        <div class="load-hint" id="load-hint">⏳ 首次加载 Three.js，请稍候...</div>
+        <div class="load-skip" id="load-skip">
+            <button class="skip-btn" id="btn-skip-3d">⏭ 跳过 3D，进入简化版</button>
+        </div>
     </div>
 
     <!-- ============ 3D场景 ============ -->
@@ -52,7 +71,9 @@
     <!-- ============ 管理员调试面板 ============ -->
     <div class="admin-panel" id="admin-panel">
       <div class="ap-title">⚙ DEBUG</div>
+      <div class="ap-summary" id="ap-summary">| FPS: -- | 建筑: -- | WebGL: -- | 粒子: -- |</div>
       <div class="ap-row"><span class="ap-label">FPS</span><span class="ap-val" id="ap-fps">--</span></div>
+      <div class="ap-row"><span class="ap-label">Perf</span><span class="ap-val" id="ap-perf">--</span></div>
       <div class="ap-row"><span class="ap-label">Scene</span><span class="ap-val" id="ap-scene">--</span></div>
       <div class="ap-row"><span class="ap-label">Cam X</span><span class="ap-val" id="ap-cx">--</span></div>
       <div class="ap-row"><span class="ap-label">Cam Y</span><span class="ap-val" id="ap-cy">--</span></div>
@@ -60,6 +81,7 @@
       <div class="ap-row"><span class="ap-label">Yaw</span><span class="ap-val" id="ap-yaw">--</span></div>
       <div class="ap-row"><span class="ap-label">Hotspots</span><span class="ap-val" id="ap-hotspots">--</span></div>
       <div class="ap-row"><span class="ap-label">WebGL</span><span class="ap-val" id="ap-webgl">--</span></div>
+      <div class="ap-row"><span class="ap-label">Particles</span><span class="ap-val" id="ap-particles">--</span></div>
     </div>
 
     <!-- ============ UI覆盖层 ============ -->
@@ -129,6 +151,23 @@
           document.getElementById('fallback-2d').style.display = 'block';
         }
       }, 8000);
+
+      // 4 秒后显示跳过按钮
+      setTimeout(function(){
+        var skipEl = document.getElementById('load-skip');
+        if(skipEl && !window.__3DRendered) {
+          skipEl.classList.add('visible');
+        }
+      }, 4000);
+
+      // 跳过 3D 功能
+      window.__skipTo2D = function(){
+        if(window.__fallbackTimer) clearTimeout(window.__fallbackTimer);
+        document.getElementById('scene').style.display = 'none';
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('ui').style.display = 'none';
+        document.getElementById('fallback-2d').style.display = 'block';
+      };
     })();
     </script>
 
@@ -158,6 +197,14 @@
     <!-- ============ UI 交互（不依赖 Three.js，轻量） ============ -->
     <script>
     (function(){
+      // 跳过 3D 按钮
+      var skipBtn = document.getElementById('btn-skip-3d');
+      if(skipBtn){
+        skipBtn.addEventListener('click', function(){
+          if(window.__skipTo2D) window.__skipTo2D();
+        });
+      }
+
       var btnEnter  = document.getElementById('btn-enter');
       var btnLogin  = document.getElementById('btn-login');
       var loginModal= document.getElementById('login-modal');

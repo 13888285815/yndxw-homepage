@@ -96,48 +96,184 @@ const WORLD_CONFIG = {
     // 核心楼阁内部
     core: {
       name: "核心楼阁",
+      title: "智能中心",
+      description: "平台核心功能导航，快速访问各个模块",
+      icon: "🏛️",
+      color: "var(--accent)",
       background: "linear-gradient(180deg, #1a2a3a 0%, #0d1820 100%)",
       sections: [
-        { id: "market", name: "市场", icon: "🏪", color: "#6366f1", target: "/market" },
-        { id: "agents", name: "Agent", icon: "🤖", color: "#8b5cf6", target: "/agents" },
-        { id: "skills", name: "Skills", icon: "🛠️", color: "#10b981", target: "/skills" },
-        { id: "docs", name: "文档", icon: "📚", color: "#f59e0b", target: "/docs" },
-        { id: "tools", name: "工具箱", icon: "🔧", color: "#3b82f6", target: "https://tools.yndxw.com" },
-        { id: "vault", name: "核心区", icon: "🔐", color: "#ef4444", target: "/vault" }
+        { 
+          id: "chat", 
+          name: "智能对话", 
+          title: "智能对话",
+          icon: "🤖", 
+          color: "#6366f1",
+          description: "与AI助手自然交流，获取即时帮助",
+          action: "panel",
+          target: "#chat-panel" 
+        },
+        { 
+          id: "tasks", 
+          name: "任务管理", 
+          title: "任务管理",
+          icon: "📋", 
+          color: "#8b5cf6",
+          description: "创建、跟踪和管理您的任务清单",
+          action: "panel",
+          target: "#tasks-panel" 
+        },
+        { 
+          id: "files", 
+          name: "文件管理", 
+          title: "文件管理",
+          icon: "📁", 
+          color: "#10b981",
+          description: "存储、组织和分享您的文件",
+          action: "panel",
+          target: "#files-panel" 
+        },
+        { 
+          id: "memory", 
+          name: "记忆系统", 
+          title: "记忆系统",
+          icon: "🧠", 
+          color: "#f59e0b",
+          description: "查看和管理AI的记忆与学习历史",
+          action: "panel",
+          target: "#memory-panel" 
+        },
+        { 
+          id: "skills", 
+          name: "技能中心", 
+          title: "技能中心",
+          icon: "🛠️", 
+          color: "#3b82f6",
+          description: "浏览和安装扩展AI能力的技能包",
+          action: "link",
+          target: "/skills" 
+        },
+        { 
+          id: "settings", 
+          name: "系统设置", 
+          title: "系统设置",
+          icon: "⚙️", 
+          color: "#6b7280",
+          description: "配置系统参数和个性化选项",
+          action: "panel",
+          target: "#settings-panel" 
+        }
       ]
     },
 
     // 市场大厅内部
     market: {
       name: "市场大厅",
-      description: "浏览和购买Agent、Skill、数字产品",
+      title: "市场大厅",
+      description: "发现和获取优质的AI Agent、技能包与数字资源",
+      icon: "🏪",
+      color: "var(--accent2)",
       categories: [
-        { id: "agents", name: "AI Agent", icon: "🤖" },
-        { id: "skills", name: "Skills", icon: "🛠️" },
-        { id: "templates", name: "模板", icon: "📝" },
-        { id: "themes", name: "主题", icon: "🎨" }
+        { 
+          id: "agents", 
+          name: "Agent市场", 
+          icon: "🤖",
+          title: "Agent市场",
+          description: "发现并部署强大的AI Agent"
+        },
+        { 
+          id: "skills", 
+          name: "Skills市场", 
+          icon: "🛠️",
+          title: "Skills市场",
+          description: "扩展Agent能力的技能包"
+        },
+        { 
+          id: "templates", 
+          name: "模板市场", 
+          icon: "📝",
+          title: "模板市场",
+          description: "快速启动项目的专业模板"
+        },
+        { 
+          id: "themes", 
+          name: "主题市场", 
+          icon: "🎨",
+          title: "主题市场",
+          description: "个性化你的数字空间"
+        }
       ]
     },
 
     // 博物馆内部
     museum: {
       name: "博物馆",
-      description: "探索数字世界的历史与未来",
+      title: "数字博物馆",
+      description: "探索YNDXW平台的发展历程、技术架构与创新应用",
+      icon: "🏛️",
+      color: "var(--accent3)",
       exhibits: [
-        { id: "history", name: "平台历史", icon: "📜" },
-        { id: "tech", name: "技术架构", icon: "🏗️" },
-        { id: "cases", name: "案例展示", icon: "🎯" }
+        { 
+          id: "history", 
+          name: "平台历史展", 
+          icon: "📜",
+          title: "平台历史展",
+          description: "探索YNDXW从概念到现实的演进历程"
+        },
+        { 
+          id: "tech", 
+          name: "技术架构展", 
+          icon: "🏗️",
+          title: "技术架构展",
+          description: "深入了解支撑虚拟世界的底层技术"
+        },
+        { 
+          id: "future", 
+          name: "未来愿景展", 
+          icon: "🔮",
+          title: "未来愿景展",
+          description: "展望YNDXW的未来发展方向"
+        }
       ]
     },
 
     // 未来学校内部
     school: {
       name: "未来学校",
-      description: "互动学习，提升技能",
+      title: "未来学校",
+      description: "互动学习空间，提升您的AI应用能力",
+      icon: "🎓",
+      color: "var(--accent)",
       courses: [
-        { id: "vibe", name: "Vibe Coding", icon: "💡" },
-        { id: "agent", name: "Agent开发", icon: "🤖" },
-        { id: "deploy", name: "部署运维", icon: "🚀" }
+        { 
+          id: "vibe", 
+          name: "Vibe Coding入门", 
+          icon: "💡",
+          title: "Vibe Coding入门",
+          description: "掌握AI辅助编程的精髓，让代码自己写代码",
+          level: "中级",
+          duration: "6周",
+          students: 1234
+        },
+        { 
+          id: "agent", 
+          name: "Agent开发实战", 
+          icon: "🤖",
+          title: "Agent开发实战",
+          description: "从零开始构建智能Agent，掌握下一代人机交互",
+          level: "高级",
+          duration: "8周",
+          students: 856
+        },
+        { 
+          id: "deploy", 
+          name: "部署与运维", 
+          icon: "🚀",
+          title: "部署与运维",
+          description: "让您的AI应用稳定运行，服务百万用户",
+          level: "中级",
+          duration: "4周",
+          students: 645
+        }
       ]
     }
   },

@@ -74,15 +74,157 @@ let transitionEl=null;
 // 高亮用的边缘光材质（按building id存储）
 const buildingOutlineMaterials={};
 
-// L2导航面板模块定义（对应 config.js L2.core.sections）
-const L2_NAV_ITEMS=[
-  { id:"market", name:"市场", icon:"🏪", color:"#6366f1", target:"/market" },
-  { id:"agents", name:"Agent", icon:"🤖", color:"#8b5cf6", target:"/agents" },
-  { id:"skills", name:"Skills", icon:"🛠️", color:"#10b981", target:"/skills" },
-  { id:"docs",   name:"文档", icon:"📚", color:"#f59e0b", target:"/docs" },
-  { id:"tools",  name:"工具箱",icon:"🔧", color:"#3b82f6", target:"https://tools.yndxw.com" },
-  { id:"vault",  name:"核心区",icon:"🔐", color:"#ef4444", target:"/vault" }
-];
+// L2面板内容渲染器
+const L2PanelRenderer = {
+  // 渲染核心区面板
+  renderCore: function(buildingData) {
+    const config = cfg.L2.core;
+    let html = '<div class="l2-panel-content core-panel">';
+    
+    // 头部信息
+    html += '<div class="l2-header">';
+    html += '<span class="l2-icon">' + config.icon + '</span>';
+    html += '<div class="l2-title">' + config.title + '</div>';
+    html += '<div class="l2-desc">' + config.description + '</div>';
+    html += '</div>';
+    
+    // 模块卡片网格
+    html += '<div class="l2-modules-grid">';
+    config.sections.forEach(function(section) {
+      html += '<div class="l2-module-card" data-action="' + section.action + '" data-target="' + section.target + '" style="border-color: ' + section.color + ';">';
+      html += '<div class="l2-card-icon">' + section.icon + '</div>';
+      html += '<div class="l2-card-title">' + section.title + '</div>';
+      html += '<div class="l2-card-desc">' + section.description + '</div>';
+      html += '<div class="l2-card-hover" style="background: ' + hexToRgba(section.color, 0.1) + ';"></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '</div>';
+    
+    return html;
+  },
+  
+  // 渲染市场大厅面板
+  renderMarket: function(buildingData) {
+    const config = cfg.L2.market;
+    let html = '<div class="l2-panel-content market-panel">';
+    
+    // 头部信息
+    html += '<div class="l2-header">';
+    html += '<span class="l2-icon">' + config.icon + '</span>';
+    html += '<div class="l2-title">' + config.title + '</div>';
+    html += '<div class="l2-desc">' + config.description + '</div>';
+    html += '</div>';
+    
+    // 分类标签
+    html += '<div class="l2-tabs">';
+    config.categories.forEach(function(cat, idx) {
+      html += '<button class="l2-tab ' + (idx === 0 ? 'active' : '') + '" data-category="' + cat.id + '">';
+      html += '<span class="tab-icon">' + cat.icon + '</span>';
+      html += '<span class="tab-name">' + cat.name + '</span>';
+      html += '</button>';
+    });
+    html += '</div>';
+    
+    // 商品网格（默认显示第一个分类）
+    html += '<div class="l2-products-grid" id="products-grid">';
+    html += '<div class="l2-loading">加载中...</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    return html;
+  },
+  
+  // 渲染博物馆面板
+  renderMuseum: function(buildingData) {
+    const config = cfg.L2.museum;
+    let html = '<div class="l2-panel-content museum-panel">';
+    
+    // 头部信息
+    html += '<div class="l2-header">';
+    html += '<span class="l2-icon">' + config.icon + '</span>';
+    html += '<div class="l2-title">' + config.title + '</div>';
+    html += '<div class="l2-desc">' + config.description + '</div>';
+    html += '</div>';
+    
+    // 展览板块
+    html += '<div class="l2-exhibits">';
+    config.exhibits.forEach(function(exhibit, idx) {
+      html += '<div class="l2-exhibit-card" data-exhibit="' + exhibit.id + '">';
+      html += '<div class="exhibit-header">';
+      html += '<span class="exhibit-icon">' + exhibit.icon + '</span>';
+      html += '<div class="exhibit-title">' + exhibit.title + '</div>';
+      html += '</div>';
+      html += '<div class="exhibit-desc">' + exhibit.description + '</div>';
+      html += '<div class="exhibit-content" id="exhibit-content-' + exhibit.id + '">';
+      html += '<div class="exhibit-placeholder">点击查看详情</div>';
+      html += '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    
+    // 时间线
+    html += '<div class="l2-timeline">';
+    html += '<div class="timeline-title">发展历程</div>';
+    html += '<div class="timeline-track">';
+    html += '<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-date">2024 Q1</div><div class="timeline-text">项目启动</div></div>';
+    html += '<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-date">2024 Q2</div><div class="timeline-text">原型发布</div></div>';
+    html += '<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-date">2024 Q3</div><div class="timeline-text">内测上线</div></div>';
+    html += '<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-date">2024 Q4</div><div class="timeline-text">正式发布</div></div>';
+    html += '</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    return html;
+  },
+  
+  // 渲染未来学校面板
+  renderSchool: function(buildingData) {
+    const config = cfg.L2.school;
+    let html = '<div class="l2-panel-content school-panel">';
+    
+    // 头部信息
+    html += '<div class="l2-header">';
+    html += '<span class="l2-icon">' + config.icon + '</span>';
+    html += '<div class="l2-title">' + config.title + '</div>';
+    html += '<div class="l2-desc">' + config.description + '</div>';
+    html += '</div>';
+    
+    // 课程卡片
+    html += '<div class="l2-courses-grid">';
+    config.courses.forEach(function(course) {
+      const levelClass = course.level === '高级' ? 'level-advanced' : (course.level === '中级' ? 'level-intermediate' : 'level-beginner');
+      html += '<div class="l2-course-card" data-course="' + course.id + '">';
+      html += '<div class="course-icon">' + course.icon + '</div>';
+      html += '<div class="course-info">';
+      html += '<div class="course-title">' + course.title + '</div>';
+      html += '<div class="course-desc">' + course.description + '</div>';
+      html += '<div class="course-meta">';
+      html += '<span class="course-level ' + levelClass + '">' + course.level + '</span>';
+      html += '<span class="course-duration">⏱️ ' + course.duration + '</span>';
+      html += '<span class="course-students">👥 ' + course.students + ' 人在学</span>';
+      html += '</div>';
+      html += '</div>';
+      html += '<button class="course-enroll-btn">立即报名</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+    
+    html += '</div>';
+    return html;
+  },
+  
+  // 根据建筑ID渲染对应面板
+  render: function(buildingId) {
+    switch(buildingId) {
+      case 'pavilion': return this.renderCore();
+      case 'market': return this.renderMarket();
+      case 'museum': return this.renderMuseum();
+      case 'school': return this.renderSchool();
+      default: return '<div class="l2-empty">暂无内容</div>';
+    }
+  }
+};
 
 /* ============ 初始化 ============ */
 function init(){
@@ -576,62 +718,46 @@ function injectPanelHTML(){
   );
   document.body.appendChild(hud);
   
-  // L2面板
+  // L2面板（重构：更灵活的结构）
   var panel = document.createElement('div');
   panel.id = 'l2-panel';
+  panel.className = 'l2-panel';
   panel.style.cssText = (
     'position:fixed;bottom:0;left:0;right:0;z-index:200;'+
     'transform:translateY(100%);transition:transform .4s cubic-bezier(.22,.61,.36,1);'+
-    'background:rgba(10,16,30,0.88);backdrop-filter:blur(20px);'+
+    'background:rgba(10,16,30,0.95);backdrop-filter:blur(20px);'+
     '-webkit-backdrop-filter:blur(20px);'+
     'border-top:1px solid rgba(255,255,255,0.12);'+
-    'border-radius:20px 20px 0 0;padding:16px 12px 24px;'+
-    'max-height:75vh;overflow-y:auto;'
+    'border-radius:20px 20px 0 0;'+
+    'max-height:85vh;overflow-y:auto;'+
+    'box-shadow:0 -10px 50px rgba(0,0,0,0.5);'
   );
   
-  // 面板头部
-  panel.innerHTML = '<div id="panel-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:0 8px;">'+
-    '<div style="display:flex;align-items:center;gap:10px;">'+
-    '<span id="panel-bld-icon" style="font-size:22px;">🏛️</span>'+
-    '<div><div id="panel-bld-name" style="font-size:16px;font-weight:600;color:#fff;"></div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px;">点击模块进入相应区域</div></div></div>'+
+  // 面板头部（通用）
+  panel.innerHTML = '<div class="l2-panel-header" style="'+
+    'position:sticky;top:0;z-index:10;'+
+    'display:flex;align-items:center;justify-content:space-between;'+
+    'padding:16px 20px;'+
+    'background:rgba(10,16,30,0.95);backdrop-filter:blur(20px);'+
+    '-webkit-backdrop-filter:blur(20px);'+
+    'border-bottom:1px solid rgba(255,255,255,0.08);'+
+    '">'+
+    '<div style="display:flex;align-items:center;gap:12px;">'+
+    '<span id="panel-bld-icon" style="font-size:28px;">🏛️</span>'+
+    '<div>'+
+    '<div id="panel-bld-name" style="font-size:18px;font-weight:600;color:#fff;margin-bottom:2px;"></div>'+
+    '<div id="panel-bld-desc" style="font-size:12px;color:rgba(255,255,255,0.5);"></div>'+
+    '</div>'+
+    '</div>'+
     '<button id="panel-close" style="'+
     'background:rgba(255,255,255,0.08);border:none;border-radius:50%;'+
-    'width:32px;height:32px;display:flex;align-items:center;justify-content:center;'+
-    'color:#fff;font-size:16px;cursor:pointer;transition:background .2s;'+
-    '">✕</button></div>'+
-    '<div id="panel-modules" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"></div>';
+    'width:36px;height:36px;display:flex;align-items:center;justify-content:center;'+
+    'color:#fff;font-size:18px;cursor:pointer;transition:all .2s;'+
+    '">✕</button>'+
+    '</div>'+
+    '<div id="panel-body" style="padding:20px;padding-bottom:40px;"></div>';
   
   document.body.appendChild(panel);
-  
-  // 填充6个模块
-  var modules = document.getElementById('panel-modules');
-  L2_NAV_ITEMS.forEach(function(item){
-    var card = document.createElement('a');
-    card.href = item.target;
-    card.target = item.target.startsWith('http') ? '_blank' : '_self';
-    card.style.cssText = (
-      'display:flex;flex-direction:column;align-items:center;justify-content:center;'+
-      'gap:6px;padding:14px 8px;border-radius:14px;text-decoration:none;'+
-      'background:' + hexToRgba(item.color, 0.15) + ';'+
-      'border:1px solid ' + hexToRgba(item.color, 0.3) + ';'+
-      'transition:transform .2s,background .2s,box-shadow .2s;cursor:pointer;'+
-      'color:#fff;'
-    );
-    card.innerHTML = '<span style="font-size:26px;">' + item.icon + '</span>'+
-      '<span style="font-size:12px;font-weight:500;">' + item.name + '</span>';
-    card.addEventListener('mouseenter', function(){
-      card.style.transform='scale(1.06)';
-      card.style.background = hexToRgba(item.color, 0.28);
-      card.style.boxShadow = '0 4px 20px ' + hexToRgba(item.color, 0.4);
-    });
-    card.addEventListener('mouseleave', function(){
-      card.style.transform='';
-      card.style.background = hexToRgba(item.color, 0.15);
-      card.style.boxShadow='';
-    });
-    modules.appendChild(card);
-  });
 }
 
 function hexToRgba(hex, alpha){
@@ -644,9 +770,44 @@ function hexToRgba(hex, alpha){
 function openL2Panel(buildingId, buildingName){
   isPanelOpen = true;
   activeBuildingId = buildingId;
+  
   var panel = document.getElementById('l2-panel');
   var panelName = document.getElementById('panel-bld-name');
-  if(panelName) panelName.textContent = buildingName || buildingId;
+  var panelDesc = document.getElementById('panel-bld-desc');
+  var panelIcon = document.getElementById('panel-bld-icon');
+  var panelBody = document.getElementById('panel-body');
+  
+  // 获取建筑配置
+  var buildingConfig;
+  switch(buildingId) {
+    case 'pavilion': buildingConfig = cfg.L2.core; break;
+    case 'market': buildingConfig = cfg.L2.market; break;
+    case 'museum': buildingConfig = cfg.L2.museum; break;
+    case 'school': buildingConfig = cfg.L2.school; break;
+  }
+  
+  if(panelName && buildingConfig) panelName.textContent = buildingConfig.title || buildingName;
+  if(panelDesc && buildingConfig) panelDesc.textContent = buildingConfig.description || '';
+  if(panelIcon && buildingConfig) panelIcon.textContent = buildingConfig.icon || '🏛️';
+  
+  // 渲染面板内容
+  if(panelBody) {
+    panelBody.innerHTML = L2PanelRenderer.render(buildingId);
+    
+    // 绑定事件
+    setupL2PanelEvents(buildingId);
+    
+    // 如果是市场大厅，加载商品数据
+    if(buildingId === 'market') {
+      loadMarketProducts('agents'); // 默认加载Agent分类
+    }
+    
+    // 如果是博物馆，加载展览详情
+    if(buildingId === 'museum') {
+      loadMuseumExhibits();
+    }
+  }
+  
   if(panel) panel.style.transform='translateY(0)';
 }
 
@@ -675,6 +836,186 @@ function setupPanelEvents(){
       closeL2Panel();
     }
   });
+}
+
+/* ============ L2面板事件绑定 ============ */
+function setupL2PanelEvents(buildingId){
+  switch(buildingId) {
+    case 'pavilion':
+      setupCoreEvents();
+      break;
+    case 'market':
+      setupMarketEvents();
+      break;
+    case 'museum':
+      setupMuseumEvents();
+      break;
+    case 'school':
+      setupSchoolEvents();
+      break;
+  }
+}
+
+function setupCoreEvents(){
+  // 核心区模块卡片点击
+  var cards = document.querySelectorAll('.l2-module-card');
+  cards.forEach(function(card) {
+    card.addEventListener('click', function() {
+      var action = this.getAttribute('data-action');
+      var target = this.getAttribute('data-target');
+      
+      if(action === 'link') {
+        window.location.href = target;
+      } else if(action === 'panel') {
+        // 显示子面板（可以后续实现）
+        console.log('Open sub-panel:', target);
+      }
+    });
+    
+    // Hover效果
+    card.addEventListener('mouseenter', function() {
+      this.style.transform = 'translateY(-4px)';
+      this.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+    });
+    card.addEventListener('mouseleave', function() {
+      this.style.transform = '';
+      this.style.boxShadow = '';
+    });
+  });
+}
+
+function setupMarketEvents(){
+  // 分类标签切换
+  var tabs = document.querySelectorAll('.l2-tab');
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      // 更新active状态
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      
+      // 加载对应分类的商品
+      var category = this.getAttribute('data-category');
+      loadMarketProducts(category);
+    });
+  });
+}
+
+function setupMuseumEvents(){
+  // 展览卡片点击
+  var exhibits = document.querySelectorAll('.l2-exhibit-card');
+  exhibits.forEach(function(exhibit) {
+    exhibit.addEventListener('click', function() {
+      var exhibitId = this.getAttribute('data-exhibit');
+      toggleExhibitContent(exhibitId);
+    });
+  });
+}
+
+function setupSchoolEvents(){
+  // 课程报名按钮
+  var buttons = document.querySelectorAll('.course-enroll-btn');
+  buttons.forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      alert('报名功能即将上线，敬请期待！');
+    });
+  });
+  
+  // 课程卡片点击
+  var courses = document.querySelectorAll('.l2-course-card');
+  courses.forEach(function(course) {
+    course.addEventListener('click', function() {
+      var courseId = this.getAttribute('data-course');
+      console.log('View course:', courseId);
+    });
+  });
+}
+
+/* ============ 数据加载函数 ============ */
+function loadMarketProducts(category) {
+  // 从JSON文件加载商品数据
+  fetch('data/content-market.json')
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      var grid = document.getElementById('products-grid');
+      if(!grid) return;
+      
+      // 这里可以根据category过滤，现在先显示featured
+      var products = data.featured || [];
+      
+      var html = '';
+      products.forEach(function(product) {
+        html += '<div class="l2-product-card">';
+        html += '<div class="product-icon">' + (product.icon || '📦') + '</div>';
+        html += '<div class="product-info">';
+        html += '<div class="product-title">' + product.title + '</div>';
+        html += '<div class="product-desc">' + product.description + '</div>';
+        html += '<div class="product-footer">';
+        html += '<span class="product-price">¥' + product.price + '</span>';
+        html += '<span class="product-rating">⭐ ' + product.rating + '</span>';
+        html += '</div>';
+        html += '</div>';
+        html += '<button class="product-buy-btn">购买</button>';
+        html += '</div>';
+      });
+      
+      grid.innerHTML = html || '<div class="l2-empty">该分类暂无商品</div>';
+      
+      // 绑定购买按钮事件
+      var buyButtons = grid.querySelectorAll('.product-buy-btn');
+      buyButtons.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          alert('购买功能即将上线！');
+        });
+      });
+    })
+    .catch(function(err) {
+      console.error('Failed to load market data:', err);
+      var grid = document.getElementById('products-grid');
+      if(grid) grid.innerHTML = '<div class="l2-error">加载失败，请刷新重试</div>';
+    });
+}
+
+function loadMuseumExhibits() {
+  // 从JSON文件加载展览数据
+  fetch('data/content-museum.json')
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      var exhibits = data.exhibits || [];
+      
+      exhibits.forEach(function(exhibit) {
+        var contentEl = document.getElementById('exhibit-content-' + exhibit.id);
+        if(!contentEl) return;
+        
+        var html = '<div class="exhibit-sections">';
+        (exhibit.sections || []).forEach(function(section) {
+          html += '<div class="exhibit-section">';
+          html += '<h4>' + section.title + '</h4>';
+          html += '<p>' + section.content + '</p>';
+          html += '</div>';
+        });
+        html += '</div>';
+        
+        contentEl.innerHTML = html;
+      });
+    })
+    .catch(function(err) {
+      console.error('Failed to load museum data:', err);
+    });
+}
+
+function toggleExhibitContent(exhibitId) {
+  var contentEl = document.getElementById('exhibit-content-' + exhibitId);
+  if(!contentEl) return;
+  
+  if(contentEl.classList.contains('expanded')) {
+    contentEl.classList.remove('expanded');
+    contentEl.style.maxHeight = '0';
+  } else {
+    contentEl.classList.add('expanded');
+    contentEl.style.maxHeight = '500px';
+  }
 }
 
 /* ============ 场景过渡动画 ============ */
