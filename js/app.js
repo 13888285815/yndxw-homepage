@@ -72,6 +72,12 @@ class App3D {
       this.sceneManager.getScene()
     );
 
+    // 3D过渡场景管理器（需求文档§5.2.5）
+    this.zoneScenes = new window.ZoneScenes(
+      this.sceneManager.getScene(),
+      this.sceneManager.getCamera()
+    );
+
     this.createFiveZones();
 
     setTimeout(() => this.hideLoading(), 500);
@@ -201,6 +207,25 @@ class App3D {
   }
 
   /**
+   * 隐藏主场景的建筑和门（显示3D过渡场景时）
+   */
+  hideMainSceneObjects() {
+    this.sceneManager.buildings.forEach(b => b.visible = false);
+    this.doorInteraction.doors.forEach(d => d.visible = false);
+    // 隐藏水面和天空
+    if (this.sceneManager.waterMesh) this.sceneManager.waterMesh.visible = false;
+  }
+
+  /**
+   * 显示主场景的建筑和门（返回主场景时）
+   */
+  showMainSceneObjects() {
+    this.sceneManager.buildings.forEach(b => b.visible = true);
+    this.doorInteraction.doors.forEach(d => { d.visible = true; d.userData.isOpen = false; });
+    if (this.sceneManager.waterMesh) this.sceneManager.waterMesh.visible = true;
+  }
+
+  /**
    * 根据区域ID获取角度
    */
   getZoneAngle(zoneId) {
@@ -240,19 +265,15 @@ class App3D {
   showTransitionScene(zoneId, callback) {
     console.log(`[App3D] 3D过渡场景: ${zoneId}`);
     
-    // 使用场景加载器按需加载（需求文档§5.2.7：点击门后再加载）
-    this.sceneLoader.loadZoneScene(zoneId,
-      (progress) => console.log(`[App3D] 区域加载进度: ${progress * 100}%`),
-      () => {
-        // 加载完成，5秒3D过渡后切换2D
-        setTimeout(callback, 5000);
-      },
-      () => {
-        // 加载超时，直接显示2D界面
-        console.warn(`[App3D] 区域 ${zoneId} 加载超时，直接显示2D`);
-        callback();
-      }
-    );
+    // 隐藏主场景的建筑和门，显示3D过渡场景
+    this.hideMainSceneObjects();
+    
+    // 使用ZoneScenes显示各区3D过渡场景（5秒，需求文档§5.2.5）
+    this.zoneScenes.showZoneScene(zoneId, () => {
+      // 5秒3D过渡完成，切换到2D界面
+      this.zoneScenes.clearCurrentScene();
+      callback();
+    });
   }
 
   /**
@@ -378,6 +399,9 @@ class App3D {
     // 显示3D场景的canvas
     const canvas = document.querySelector('canvas');
     if (canvas) canvas.style.display = 'block';
+    
+    // 恢复主场景的建筑和门
+    this.showMainSceneObjects();
     
     // 隐藏返回按钮
     document.getElementById('back-button').classList.add('hidden');
