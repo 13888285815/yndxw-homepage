@@ -107,17 +107,20 @@ function init(){
   // 开始动画
   animate();
   window.__3DRendered = true;
+  if(window.__fallbackTimer) clearTimeout(window.__fallbackTimer);
   } catch(e) {
     console.error('[YNDXW INIT ERROR]', e.message, e.stack);
-    var el = document.getElementById('loadBar');
-    if(el) { el.style.width='100%'; el.style.background='#e33'; }
-    var loading = document.getElementById('loading');
-    if(loading) loading.querySelector('h2').textContent = '加载失败：' + e.message;
+    // 降级到2D
+    var sceneEl = document.getElementById('scene');
+    var loadingEl = document.getElementById('loading');
+    var uiEl = document.getElementById('ui');
+    var fallbackEl = document.getElementById('fallback-2d');
+    if(sceneEl) sceneEl.style.display = 'none';
+    if(loadingEl) loadingEl.style.display = 'none';
+    if(uiEl) uiEl.style.display = 'none';
+    if(fallbackEl) fallbackEl.style.display = 'block';
   }
 }
-
-// 标记渲染成功
-window.__3DRendered = true;
 
 /* ============ 地形 ============ */
 function getHeight(x, z){
