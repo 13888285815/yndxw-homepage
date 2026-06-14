@@ -19,7 +19,7 @@ class SimplexNoise{
   constructor(){
     this.grad3=[[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],[1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],[0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]];
     this.p=[];for(let i=0;i<256;i++)this.p[i]=i;
-    for(let i=255;i>0;i--){const j=Math.floor(Math.random()*(i+1));[this.p[i],this.p[j]]=[this.p[j],this.p[i]]]}
+    for(let i=255;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=this.p[i];this.p[i]=this.p[j];this.p[j]=t;}
     this.perm=[];for(let i=0;i<512;i++)this.perm[i]=this.p[i&255];
   }
   dot(g,x,y){return g[0]*x+g[1]*y}
