@@ -1,0 +1,295 @@
+/* ============ YNDXW 全设备自适应 ============ */
+
+:root {
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --header-h: min(60px, 10vh);
+  --btn-h: min(44px, 7vh);
+  --hero-y: 5vh;
+  --hint-y: min(24px, 3vh);
+  --color-primary: #6366f1;
+  --color-accent: #8b5cf6;
+  --radius: 28px;
+  --blur: 10px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+html,body{
+  width:100%;height:100%;
+  overflow:hidden;
+  font-family:'PingFang SC','Microsoft YaHei','Segoe UI','Helvetica Neue',system-ui,-apple-system,sans-serif;
+  color:#fff;
+  background:#000;
+  overscroll-behavior:none;
+  -webkit-overflow-scrolling:touch;
+  user-select:none;
+  -webkit-user-select:none;
+}
+
+/* ============ 3D场景 ============ */
+#scene{
+  position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;
+  touch-action:pan-y pinch-zoom;
+}
+
+/* ============ UI层 ============ */
+#ui{
+  position:fixed;
+  top:var(--safe-t);
+  left:var(--safe-l);
+  right:var(--safe-r);
+  bottom:var(--safe-b);
+  z-index:10;
+  pointer-events:none;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+
+/* ============ 顶部导航 ============ */
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 16px;
+  padding-top:calc(12px + var(--safe-t));
+  pointer-events:auto;
+  min-height:var(--header-h);
+}
+.logo{
+  font-size:clamp(16px,3.5vw,26px);
+  font-weight:700;
+  letter-spacing:1.5px;
+  text-shadow:0 2px 12px rgba(0,0,0,.5);
+  white-space:nowrap;
+}
+nav{display:flex;gap:min(8px,1.5vw);}
+
+.ui-btn{
+  padding:min(8px, .8vh) min(18px, 2.5vw);
+  height:var(--btn-h);
+  border:1.5px solid rgba(255,255,255,.4);
+  background:rgba(0,0,0,.2);
+  backdrop-filter:blur(var(--blur));
+  -webkit-backdrop-filter:blur(var(--blur));
+  color:#fff;
+  border-radius:var(--radius);
+  cursor:pointer;
+  font-size:clamp(12px,2.2vw,15px);
+  font-weight:500;
+  font-family:inherit;
+  transition:all .2s;
+  pointer-events:auto;
+  white-space:nowrap;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  -webkit-touch-callout:none;
+}
+.ui-btn:active{transform:scale(.96)}
+.ui-btn:hover{background:rgba(255,255,255,.15);border-color:#fff}
+.ui-btn.primary{
+  background:linear-gradient(135deg,var(--color-primary),var(--color-accent));
+  border:none;
+  font-weight:600;
+  box-shadow:0 4px 20px rgba(99,102,241,.4);
+}
+.ui-btn.primary:active{box-shadow:0 2px 10px rgba(99,102,241,.3)}
+.ui-btn.ghost{
+  background:rgba(255,255,255,.06);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+
+/* ============ 底部提示 ============ */
+.hint{
+  text-align:center;
+  padding-bottom:max(20px, var(--safe-b));
+  padding-left:20px;
+  padding-right:20px;
+  font-size:clamp(10px,1.8vw,13px);
+  opacity:.55;
+  animation:pulse 3s ease-in-out infinite;
+}
+.hint span{display:inline-block}
+
+/* ============ Loading ============ */
+#loading{
+  position:fixed;
+  top:0;left:0;width:100%;height:100%;
+  z-index:100;
+  background:#0a0a1a;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  transition:opacity .8s;
+}
+#loading.hide{opacity:0;pointer-events:none}
+#loading h2{
+  font-size:clamp(18px,4vw,28px);
+  margin-bottom:clamp(12px,3vh,24px);
+  font-weight:300;
+  letter-spacing:6px;
+}
+#loading .bar{
+  width:min(200px,60vw);
+  height:3px;
+  background:rgba(255,255,255,.1);
+  border-radius:2px;
+  overflow:hidden;
+}
+#loading .bar-inner{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,var(--color-primary),var(--color-accent));
+  border-radius:2px;
+  transition:width .3s;
+}
+
+/* ============ 登录弹窗 ============ */
+#login-modal{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  z-index:300;
+  background:rgba(0,0,0,.7);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  animation:fadeIn .3s;
+}
+#login-modal.show{display:flex}
+.login-box{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:24px;
+  padding:clamp(24px,5vw,48px);
+  width:100%;
+  max-width:380px;
+  text-align:center;
+  animation:scaleIn .3s ease-out;
+}
+.login-box h2{font-size:clamp(20px,4vw,26px);margin-bottom:8px}
+.login-box p{color:#999;margin-bottom:24px;font-size:14px}
+.login-input{
+  width:100%;
+  padding:14px 16px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:14px;
+  color:#fff;
+  font-size:16px;
+  font-family:inherit;
+  outline:none;
+  transition:border .2s;
+  margin-bottom:12px;
+}
+.login-input:focus{border-color:var(--color-primary)}
+.login-input::placeholder{color:#666}
+.login-btn{
+  width:100%;padding:14px;
+  background:linear-gradient(135deg,var(--color-primary),var(--color-accent));
+  border:none;border-radius:14px;color:#fff;
+  font-size:16px;font-weight:600;
+  cursor:pointer;
+  transition:all .2s;
+  font-family:inherit;
+  margin-top:8px;
+}
+.login-btn:active{transform:scale(.97)}
+
+/* ============ L2视图 ============ */
+#l2-view{
+  position:fixed;
+  top:var(--safe-t);
+  left:var(--safe-l);
+  right:var(--safe-r);
+  bottom:var(--safe-b);
+  background:linear-gradient(180deg,#0d1820 0%,#060a10 100%);
+  z-index:50;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding:max(40px, var(--safe-t, 20px)) 16px max(20px, var(--safe-b, 10px));
+}
+
+/* ============ 动画 ============ */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@keyframes pulse{
+  0%,100%{opacity:.55}
+  50%{opacity:.85}
+}
+@keyframes fadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+@keyframes scaleIn{
+  from{opacity:0;transform:scale(.9)}
+  to{opacity:1;transform:scale(1)}
+}
+
+/* ============ 断点：平板 ≤1024px ============ */
+@media(max-width:1024px){
+  :root{--hero-y:3vh}
+  .ui-btn{padding:min(8px,.8vh) min(14px,2vw)}
+}
+
+/* ============ 断点：手机 ≤768px ============ */
+@media(max-width:768px){
+  :root{--header-h:52px;--btn-h:40px;--hero-y:1vh;--blur:8px}
+  header{padding:8px 12px;padding-top:calc(8px + var(--safe-t))}
+  .logo{font-size:18px;letter-spacing:1px}
+  .ui-btn{padding:6px 12px;font-size:12px;border-radius:20px}
+  nav{gap:6px}
+  .hint{font-size:10px;padding-bottom:max(12px, var(--safe-b))}
+}
+
+/* ============ 断点：小手机 ≤480px ============ */
+@media(max-width:480px){
+  :root{--header-h:46px;--btn-h:36px}
+  header{padding:6px 10px}
+  .logo{font-size:15px}
+  .ui-btn{padding:4px 10px;font-size:11px;border-radius:16px}
+  .hint{font-size:9px}
+}
+
+/* ============ 断点：极小手机 ≤360px ============ */
+@media(max-width:360px){
+  .logo{font-size:14px}
+  .ui-btn{padding:4px 8px;font-size:10px}
+  nav{gap:4px}
+}
+
+/* ============ 横屏手机 (≤932px 且横屏) ============ */
+@media(max-height:480px) and (orientation:landscape){
+  :root{--header-h:40px;--btn-h:32px}
+  .logo{font-size:14px}
+  header{padding:4px 10px}
+  .ui-btn{font-size:10px;padding:3px 8px}
+  .hint{padding-bottom:8px;font-size:8px}
+}
+
+/* ============ 高DPI/Retina ============ */
+@media(-webkit-min-device-pixel-ratio:2),(min-resolution:192dpi){
+  .ui-btn,.login-box,#l2-view .card{border-width:.5px}
+}
+
+/* ============ 暗色模式（默认） ============ */
+@media(prefers-color-scheme:light){
+  /* 保持暗色，不受系统影响 */
+}
+
+/* ============ 降低动画偏好 ============ */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
