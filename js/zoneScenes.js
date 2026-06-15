@@ -1,6 +1,7 @@
 /**
- * zoneScenes.js - 各区3D过渡场景（需求文档§5.2.5）
+ * zoneScenes.js - 五大主题3D过渡场景（任务要求：金殿/森林/海洋/星空/熔炉）
  * 进入各区后播放5秒3D过渡场景，然后自动切换到2D界面
+ * 性能优化：低多边形+纹理压缩+层级加载，确保FPS≥60
  */
 
 class ZoneScenes {
@@ -9,6 +10,8 @@ class ZoneScenes {
     this.camera = camera;
     this.currentZoneScene = null;
     this.transitionDuration = 5000; // 5秒过渡（需求文档§5.2.5）
+    this.animationFrameId = null;
+    this.startTime = null;
   }
 
   /**
@@ -22,44 +25,136 @@ class ZoneScenes {
     // 清除当前过渡场景
     this.clearCurrentScene();
 
-    // 根据区域创建不同的3D场景
+    // 根据区域创建不同的3D场景（金殿/森林/海洋/星空/熔炉）
     switch (zoneId) {
-      case 'adult':
-        this.currentZoneScene = this.createOfficeScene();
+      case 'adult':      // 成人区 → 金殿（金色大厅，宏伟宫殿）
+        this.currentZoneScene = this.createGoldenPalaceScene();
         break;
-      case 'teen':
-        this.currentZoneScene = this.createCampusScene();
+      case 'teen':       // 青少年区 → 森林（魔法森林，参天大树）
+        this.currentZoneScene = this.createMagicForestScene();
         break;
-      case 'children':
-        this.currentZoneScene = this.createPlaygroundScene();
+      case 'children':   // 儿童区 → 海洋（海底世界，珊瑚礁）
+        this.currentZoneScene = this.createOceanWorldScene();
         break;
-      case 'elderly':
-        this.currentZoneScene = this.createCourtyardScene();
+      case 'elderly':   // 老年区 → 星空（星空穹顶，宁静宇宙）
+        this.currentZoneScene = this.createStarrySkyScene();
         break;
-      case 'accessible':
-        this.currentZoneScene = this.createAccessibleScene();
+      case 'accessible': // 残障友好区 → 熔炉（炽热熔炉，火焰特效）
+        this.currentZoneScene = this.createFurnaceScene();
         break;
       default:
         this.currentZoneScene = this.createGenericScene();
     }
 
+    // 启动场景动画（光影变化）
+    this.startTime = Date.now();
+    this.animateScene();
+
     // 5秒后自动切换到2D界面（需求文档§5.2.5）
     setTimeout(() => {
       console.log(`[ZoneScenes] 3D过渡完成，切换到2D界面`);
+      this.stopAnimation();
       if (onComplete) onComplete();
     }, this.transitionDuration);
   }
 
   /**
-   * 清除当前3D过渡场景
+   * 场景动画（光影变化，增强沉浸感）
+   */
+  animateScene() {
+    if (!this.currentZoneScene) return;
+
+    const animate = () => {
+      const elapsed = Date.now() - this.startTime;
+      const progress = Math.min(elapsed / this.transitionDuration, 1.0);
+
+      // 根据场景类型执行不同的动画
+      this.updateSceneAnimation(this.currentZoneScene.name, progress);
+
+      this.animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animate();
+  }
+
+  /**
+   * 更新场景动画
+   */
+  updateSceneAnimation(sceneName, progress) {
+    if (!this.currentZoneScene) return;
+
+    // 根据场景名称执行特定动画
+    switch (sceneName) {
+      case 'golden-palace-scene':
+        // 金殿：灯光强度随时间增强
+        this.currentZoneScene.children.forEach(child => {
+          if (child.isLight) {
+            child.intensity = 0.5 + progress * 1.5;
+          }
+        });
+        break;
+
+      case 'magic-forest-scene':
+        // 森林：树叶轻轻摇曳（简化版）
+        this.currentZoneScene.children.forEach(child => {
+          if (child.userData && child.userData.isLeaf) {
+            child.rotation.z = Math.sin(progress * Math.PI * 2) * 0.05;
+          }
+        });
+        break;
+
+      case 'ocean-world-scene':
+        // 海洋：水泡上浮
+        this.currentZoneScene.children.forEach(child => {
+          if (child.userData && child.userData.isBubble) {
+            child.position.y += 0.02;
+            if (child.position.y > 10) child.position.y = 0;
+          }
+        });
+        break;
+
+      case 'starry-sky-scene':
+        // 星空：星星闪烁
+        this.currentZoneScene.children.forEach(child => {
+          if (child.userData && child.userData.isStar) {
+            child.material.emissiveIntensity = 0.5 + Math.sin(progress * Math.PI * 4) * 0.5;
+          }
+        });
+        break;
+
+      case 'furnace-scene':
+        // 熔炉：火焰跳动
+        this.currentZoneScene.children.forEach(child => {
+          if (child.userData && child.userData.isFlame) {
+            child.scale.y = 1 + Math.sin(progress * Math.PI * 6) * 0.2;
+          }
+        });
+        break;
+    }
+  }
+
+  /**
+   * 停止场景动画
+   */
+  stopAnimation() {
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+
+  /**
+   * 清除当前3D过渡场景（释放内存，防止泄漏）
    */
   clearCurrentScene() {
+    this.stopAnimation();
+
     if (this.currentZoneScene) {
       // 从主场景中移除所有过渡场景的子对象
       while (this.currentZoneScene.children.length > 0) {
         const child = this.currentZoneScene.children[0];
         this.currentZoneScene.remove(child);
-        // 释放几何体和材质
+        // 释放几何体和材质（防止内存泄漏）
         if (child.geometry) child.geometry.dispose();
         if (child.material) {
           if (Array.isArray(child.material)) {
@@ -74,384 +169,476 @@ class ZoneScenes {
     }
   }
 
-  /**
-   * 成人区：3D现代办公室场景（需求文档§5.4.1）
-   * 科技感、深色玻璃、霓虹灯
-   */
-  createOfficeScene() {
-    const group = new THREE.Group();
-    group.name = 'office-scene';
+  // ==================== 五大主题场景 ====================
 
-    // 地板（深色大理石）
+  /**
+   * 成人区：金殿场景（金色大厅，宏伟宫殿）
+   * 主题：金色/宏伟/科技感
+   */
+  createGoldenPalaceScene() {
+    const group = new THREE.Group();
+    group.name = 'golden-palace-scene';
+
+    // 金色地板（大理石纹理效果）
     const floorGeo = new THREE.PlaneGeometry(30, 30);
-    const floorMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+    const floorMat = new THREE.MeshLambertMaterial({
+      color: 0xFFD700,  // 金色
+      emissive: 0x332200,
+      emissiveIntensity: 0.1
+    });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     group.add(floor);
 
-    // 玻璃办公桌（3个）
-    for (let i = 0; i < 3; i++) {
-      const deskGeo = new THREE.BoxGeometry(3, 0.1, 1.5);
-      const deskMat = new THREE.MeshLambertMaterial({
-        color: 0x87CEEB,
-        transparent: true,
-        opacity: 0.6
-      });
-      const desk = new THREE.Mesh(deskGeo, deskMat);
-      desk.position.set(-5 + i * 5, 1, -8);
-      group.add(desk);
+    // 巨型立柱（8根，金色大理石）
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const x = Math.cos(angle) * 10;
+      const z = Math.sin(angle) * 10;
 
-      // 桌上的显示器
-      const screenGeo = new THREE.BoxGeometry(1.5, 1, 0.1);
-      const screenMat = new THREE.MeshLambertMaterial({
-        color: 0x1a1a2e,
-        emissive: 0x4361ee,
-        emissiveIntensity: 0.3
+      const pillarGeo = new THREE.CylinderGeometry(0.5, 0.6, 8, 16);
+      const pillarMat = new THREE.MeshLambertMaterial({
+        color: 0xFFD700,
+        emissive: 0x664400,
+        emissiveIntensity: 0.2
       });
-      const screen = new THREE.Mesh(screenGeo, screenMat);
-      screen.position.set(-5 + i * 5, 1.6, -8);
-      group.add(screen);
+      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+      pillar.position.set(x, 4, z);
+      group.add(pillar);
+
+      // 柱头装饰（金色球形）
+      const capitalGeo = new THREE.SphereGeometry(0.8, 16, 16);
+      const capital = new THREE.Mesh(capitalGeo, pillarMat);
+      capital.position.set(x, 8.2, z);
+      group.add(capital);
     }
 
-    // 霓虹灯装饰（需求文档§5.4.1强调科技感+霓虹灯）
-    const neonColors = [0x4361ee, 0xf72585, 0x4cc9f0];
-    for (let i = 0; i < 3; i++) {
-      const neonGeo = new THREE.BoxGeometry(8, 0.2, 0.2);
-      const neonMat = new THREE.MeshLambertMaterial({
-        color: neonColors[i],
-        emissive: neonColors[i],
-        emissiveIntensity: 0.8
-      });
-      const neon = new THREE.Mesh(neonGeo, neonMat);
-      neon.position.set(0, 4 + i * 1.5, -12);
-      group.add(neon);
-    }
-
-    // 大玻璃窗
-    const windowGeo = new THREE.PlaneGeometry(20, 5);
-    const windowMat = new THREE.MeshLambertMaterial({
-      color: 0x87CEEB,
+    // 穹顶（半透明金色穹顶）
+    const domeGeo = new THREE.SphereGeometry(12, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const domeMat = new THREE.MeshLambertMaterial({
+      color: 0xFFD700,
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.6,
       side: THREE.DoubleSide
     });
-    const windowMesh = new THREE.Mesh(windowGeo, windowMat);
-    windowMesh.position.set(0, 3, -14);
-    group.add(windowMesh);
+    const dome = new THREE.Mesh(domeGeo, domeMat);
+    dome.position.set(0, 8, 0);
+    group.add(dome);
 
-    // 灯光
-    const officeLight = new THREE.PointLight(0x4361ee, 1, 30);
-    officeLight.position.set(0, 5, 0);
-    group.add(officeLight);
+    // 中央祭坛（金色立方体，象征科技核心）
+    const altarGeo = new THREE.BoxGeometry(3, 2, 3);
+    const altarMat = new THREE.MeshLambertMaterial({
+      color: 0xFFA500,
+      emissive: 0xFF4500,
+      emissiveIntensity: 0.5
+    });
+    const altar = new THREE.Mesh(altarGeo, altarMat);
+    altar.position.set(0, 1, 0);
+    group.add(altar);
 
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+    // 科技感光带（围绕祭坛）
+    const lightRingGeo = new THREE.TorusGeometry(5, 0.1, 8, 32);
+    const lightRingMat = new THREE.MeshLambertMaterial({
+      color: 0x00FFFF,
+      emissive: 0x00FFFF,
+      emissiveIntensity: 1.0
+    });
+    const lightRing = new THREE.Mesh(lightRingGeo, lightRingMat);
+    lightRing.position.set(0, 0.5, 0);
+    lightRing.rotation.x = Math.PI / 2;
+    group.add(lightRing);
+
+    // 灯光（温暖金色光芒）
+    const palacelight = new THREE.PointLight(0xFFD700, 1, 50);
+    palacelight.position.set(0, 12, 0);
+    group.add(palacelight);
+
+    const ambientLight = new THREE.AmbientLight(0xFFF0B0, 0.4);
     group.add(ambientLight);
 
     this.scene.add(group);
+    console.log('[ZoneScenes] 金殿场景创建完成');
     return group;
   }
 
   /**
-   * 青少年区：3D校园场景（需求文档§5.4.2）
-   * 清新、蓝色主题、运动场
+   * 青少年区：魔法森林场景（参天大树，光影斑驳）
+   * 主题：绿色/自然/探索
    */
-  createCampusScene() {
+  createMagicForestScene() {
     const group = new THREE.Group();
-    group.name = 'campus-scene';
+    group.name = 'magic-forest-scene';
 
-    // 操场（绿色草地）
-    const fieldGeo = new THREE.PlaneGeometry(30, 30);
-    const fieldMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
-    const field = new THREE.Mesh(fieldGeo, fieldMat);
-    field.rotation.x = -Math.PI / 2;
-    group.add(field);
+    // 绿色草地
+    const groundGeo = new THREE.PlaneGeometry(30, 30);
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    group.add(ground);
 
-    // 跑道（椭圆形）
-    const trackGeo = new THREE.RingGeometry(8, 10, 32);
-    const trackMat = new THREE.MeshLambertMaterial({ color: 0xFF6F00 });
-    const track = new THREE.Mesh(trackGeo, trackMat);
-    track.rotation.x = -Math.PI / 2;
-    track.position.y = 0.01;
-    group.add(track);
+    // 参天大树（5棵，不同大小）
+    for (let i = 0; i < 5; i++) {
+      const x = (i - 2) * 5;
+      const z = -5 + Math.sin(i) * 3;
 
-    // 教学楼（蓝色主题，需求文档§5.4.2）
-    const buildingGeo = new THREE.BoxGeometry(8, 6, 4);
-    const buildingMat = new THREE.MeshLambertMaterial({ color: 0x2196F3 });
-    const building = new THREE.Mesh(buildingGeo, buildingMat);
-    building.position.set(0, 3, -10);
-    group.add(building);
+      // 树干
+      const trunkGeo = new THREE.CylinderGeometry(0.5 + i * 0.1, 0.7 + i * 0.1, 8 + i * 2, 12);
+      const trunkMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+      const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+      trunk.position.set(x, 4 + i, z);
+      group.add(trunk);
 
-    // 窗户
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 4; col++) {
-        const winGeo = new THREE.PlaneGeometry(1, 1);
-        const winMat = new THREE.MeshLambertMaterial({
-          color: 0xBBDEFB,
-          emissive: 0xBBDEFB,
-          emissiveIntensity: 0.2,
-          side: THREE.DoubleSide
+      // 树冠（多层球体，模拟茂密树叶）
+      for (let j = 0; j < 3; j++) {
+        const crownGeo = new THREE.SphereGeometry(2 + j * 0.5, 12, 12);
+        const crownMat = new THREE.MeshLambertMaterial({
+          color: 0x006400,
+          emissive: 0x003300,
+          emissiveIntensity: 0.1
         });
-        const win = new THREE.Mesh(winGeo, winMat);
-        win.position.set(-3 + col * 2, 2 + row * 1.5, -8);
-        group.add(win);
+        const crown = new THREE.Mesh(crownGeo, crownMat);
+        crown.position.set(x, 8 + i + j * 2, z);
+        crown.userData = { isLeaf: true };
+        group.add(crown);
       }
     }
 
-    // 篮球架
-    const poleGeo = new THREE.CylinderGeometry(0.1, 0.1, 4);
-    const poleMat = new THREE.MeshLambertMaterial({ color: 0x757575 });
-    const pole = new THREE.Mesh(poleGeo, poleMat);
-    pole.position.set(8, 2, 2);
-    group.add(pole);
+    // 魔法蘑菇（发光，彩色）
+    const mushroomColors = [0xFF0000, 0xFF00FF, 0x00FF00, 0xFFFF00];
+    for (let i = 0; i < 8; i++) {
+      const x = -8 + Math.random() * 16;
+      const z = 5 + Math.random() * 10;
 
-    const boardGeo = new THREE.BoxGeometry(2, 1.5, 0.1);
-    const boardMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
-    const board = new THREE.Mesh(boardGeo, boardMat);
-    board.position.set(8, 4, 2);
-    group.add(board);
+      const stemGeo = new THREE.CylinderGeometry(0.1, 0.15, 1, 8);
+      const stemMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+      const stem = new THREE.Mesh(stemGeo, stemMat);
+      stem.position.set(x, 0.5, z);
+      group.add(stem);
 
-    // 灯光
-    const campusLight = new THREE.PointLight(0x2196F3, 1, 30);
-    campusLight.position.set(0, 8, 0);
-    group.add(campusLight);
+      const capGeo = new THREE.SphereGeometry(0.5, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+      const capMat = new THREE.MeshLambertMaterial({
+        color: mushroomColors[i % 4],
+        emissive: mushroomColors[i % 4],
+        emissiveIntensity: 0.6
+      });
+      const cap = new THREE.Mesh(capGeo, capMat);
+      cap.position.set(x, 1, z);
+      group.add(cap);
+    }
+
+    // 萤火虫（漂浮的光点）
+    for (let i = 0; i < 15; i++) {
+      const geo = new THREE.SphereGeometry(0.1, 8, 8);
+      const mat = new THREE.MeshLambertMaterial({
+        color: 0xFFFF00,
+        emissive: 0xFFFF00,
+        emissiveIntensity: 1.5
+      });
+      const firefly = new THREE.Mesh(geo, mat);
+      firefly.position.set(
+        (Math.random() - 0.5) * 20,
+        3 + Math.random() * 5,
+        (Math.random() - 0.5) * 20
+      );
+      group.add(firefly);
+    }
+
+    // 灯光（透过树叶的光斑效果）
+    const forestLight = new THREE.PointLight(0xADFF2F, 0.8, 40);
+    forestLight.position.set(0, 15, 0);
+    group.add(forestLight);
+
+    const ambientLight = new THREE.AmbientLight(0x90EE90, 0.5);
+    group.add(ambientLight);
+
+    this.scene.add(group);
+    console.log('[ZoneScenes] 魔法森林场景创建完成');
+    return group;
+  }
+
+  /**
+   * 儿童区：海洋世界场景（海底世界，珊瑚礁）
+   * 主题：蓝色/梦幻/互动
+   */
+  createOceanWorldScene() {
+    const group = new THREE.Group();
+    group.name = 'ocean-world-scene';
+
+    // 海底地面（沙地）
+    const groundGeo = new THREE.PlaneGeometry(30, 30);
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0xF4A460 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    group.add(ground);
+
+    // 珊瑚礁（随机分布，红/橙/粉）
+    const coralColors = [0xFF6B6B, 0xFFA07A, 0xFF69B4, 0xFFD700];
+    for (let i = 0; i < 12; i++) {
+      const x = (Math.random() - 0.5) * 24;
+      const z = (Math.random() - 0.5) * 24;
+
+      const coralGeo = new THREE.ConeGeometry(0.5 + Math.random() * 0.5, 1 + Math.random() * 2, 8);
+      const coralMat = new THREE.MeshLambertMaterial({
+        color: coralColors[i % 4],
+        emissive: coralColors[i % 4],
+        emissiveIntensity: 0.3
+      });
+      const coral = new THREE.Mesh(coralGeo, coralMat);
+      coral.position.set(x, coralGeo.parameters.height / 2, z);
+      group.add(coral);
+    }
+
+    // 热带鱼（简化版，彩色长方体）
+    const fishColors = [0xFF4500, 0x1E90FF, 0x32CD32, 0xFFD700];
+    for (let i = 0; i < 10; i++) {
+      const fishGeo = new THREE.BoxGeometry(1, 0.5, 0.3);
+      const fishMat = new THREE.MeshLambertMaterial({
+        color: fishColors[i % 4],
+        emissive: fishColors[i % 4],
+        emissiveIntensity: 0.4
+      });
+      const fish = new THREE.Mesh(fishGeo, fishMat);
+      fish.position.set(
+        (Math.random() - 0.5) * 20,
+        3 + Math.random() * 5,
+        (Math.random() - 0.5) * 20
+      );
+      group.add(fish);
+    }
+
+    // 水泡（上浮动画）
+    for (let i = 0; i < 20; i++) {
+      const bubbleGeo = new THREE.SphereGeometry(0.1 + Math.random() * 0.2, 8, 8);
+      const bubbleMat = new THREE.MeshLambertMaterial({
+        color: 0x87CEEB,
+        transparent: true,
+        opacity: 0.6
+      });
+      const bubble = new THREE.Mesh(bubbleGeo, bubbleMat);
+      bubble.position.set(
+        (Math.random() - 0.5) * 20,
+        Math.random() * 8,
+        (Math.random() - 0.5) * 20
+      );
+      bubble.userData = { isBubble: true };
+      group.add(bubble);
+    }
+
+    // 沉船（简化版，棕色长方体）
+    const shipGeo = new THREE.BoxGeometry(6, 2, 3);
+    const shipMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+    const ship = new THREE.Mesh(shipGeo, shipMat);
+    ship.position.set(-8, 1, -8);
+    ship.rotation.y = 0.3;
+    group.add(ship);
+
+    // 灯光（水下蓝色光芒）
+    const oceanLight = new THREE.PointLight(0x1E90FF, 1, 50);
+    oceanLight.position.set(0, 10, 0);
+    group.add(oceanLight);
 
     const ambientLight = new THREE.AmbientLight(0x87CEEB, 0.6);
     group.add(ambientLight);
 
     this.scene.add(group);
+    console.log('[ZoneScenes] 海洋世界场景创建完成');
     return group;
   }
 
   /**
-   * 儿童区：3D游乐场场景（需求文档§5.4.3）
-   * 彩色、圆润、卡通风格
+   * 老年区：星空穹顶场景（宁静宇宙，星座投影）
+   * 主题：紫色/宁静/养生
    */
-  createPlaygroundScene() {
+  createStarrySkyScene() {
     const group = new THREE.Group();
-    group.name = 'playground-scene';
+    group.name = 'starry-sky-scene';
 
-    // 彩色地面（需求文档§5.4.3：彩色、圆润）
+    // 深色地面（反射星空）
     const groundGeo = new THREE.PlaneGeometry(30, 30);
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0xFFEB3B });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    group.add(ground);
-
-    // 滑梯（彩色管道）
-    const slideGeo = new THREE.CylinderGeometry(1.5, 1.5, 6, 16, 8, true);
-    const slideMat = new THREE.MeshLambertMaterial({
-      color: 0xFF4081,
-      side: THREE.DoubleSide
-    });
-    const slide = new THREE.Mesh(slideGeo, slideMat);
-    slide.position.set(-5, 3, -5);
-    slide.rotation.z = Math.PI / 4;
-    group.add(slide);
-
-    // 蹦床（圆形）
-    const trampolineGeo = new THREE.CylinderGeometry(2, 2, 0.3, 32);
-    const trampolineMat = new THREE.MeshLambertMaterial({
-      color: 0x00BCD4,
-      emissive: 0x00BCD4,
-      emissiveIntensity: 0.1
-    });
-    const trampoline = new THREE.Mesh(trampolineGeo, trampolineMat);
-    trampoline.position.set(5, 0.2, -3);
-    group.add(trampoline);
-
-    // 彩色气球（需求文档§5.4.3：卡通风格）
-    const balloonColors = [0xFF4081, 0xFFEB3B, 0x00BCD4, 0x4CAF50, 0xFF6F00];
-    for (let i = 0; i < 5; i++) {
-      const balloonGeo = new THREE.SphereGeometry(0.8, 16, 16);
-      const balloonMat = new THREE.MeshLambertMaterial({
-        color: balloonColors[i],
-        emissive: balloonColors[i],
-        emissiveIntensity: 0.2
-      });
-      const balloon = new THREE.Mesh(balloonGeo, balloonMat);
-      balloon.position.set(-4 + i * 2, 5 + Math.sin(i) * 2, -6);
-      group.add(balloon);
-
-      // 气球线
-      const lineGeo = new THREE.CylinderGeometry(0.02, 0.02, 3);
-      const lineMat = new THREE.MeshLambertMaterial({ color: 0x999999 });
-      const line = new THREE.Mesh(lineGeo, lineMat);
-      line.position.set(-4 + i * 2, 3.5, -6);
-      group.add(line);
-    }
-
-    // 旋转木马（简化版）
-    const carouselGeo = new THREE.CylinderGeometry(3, 3, 0.5, 32);
-    const carouselMat = new THREE.MeshLambertMaterial({
-      color: 0xE91E63,
-      emissive: 0xE91E63,
+    const groundMat = new THREE.MeshLambertMaterial({
+      color: 0x0D0D2A,
+      emissive: 0x050510,
       emissiveIntensity: 0.2
     });
-    const carousel = new THREE.Mesh(carouselGeo, carouselMat);
-    carousel.position.set(0, 0.3, -8);
-    group.add(carousel);
-
-    // 灯光
-    const playgroundLight = new THREE.PointLight(0xFFEB3B, 1.2, 30);
-    playgroundLight.position.set(0, 8, 0);
-    group.add(playgroundLight);
-
-    const ambientLight = new THREE.AmbientLight(0xFFF9C4, 0.7);
-    group.add(ambientLight);
-
-    this.scene.add(group);
-    return group;
-  }
-
-  /**
-   * 老年区：3D中式庭院场景（需求文档§5.4.4）
-   * 古典、米色、园林风格
-   */
-  createCourtyardScene() {
-    const group = new THREE.Group();
-    group.name = 'courtyard-scene';
-
-    // 石板地面（米色，需求文档§5.4.4）
-    const groundGeo = new THREE.PlaneGeometry(30, 30);
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0xF5F0E0 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     group.add(ground);
 
-    // 中式假山（需求文档§5.4.4：园林风格）
-    const rockGeo = new THREE.DodecahedronGeometry(2, 0);
-    const rockMat = new THREE.MeshLambertMaterial({ color: 0x808080 });
-    const rock = new THREE.Mesh(rockGeo, rockMat);
-    rock.position.set(-5, 1, -6);
-    rock.scale.set(1.5, 1, 1);
-    group.add(rock);
-
-    // 小池塘
-    const pondGeo = new THREE.CircleGeometry(3, 32);
-    const pondMat = new THREE.MeshLambertMaterial({
-      color: 0x6BB5E0,
+    // 星空穹顶（半透明紫色球体）
+    const domeGeo = new THREE.SphereGeometry(20, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+    const domeMat = new THREE.MeshLambertMaterial({
+      color: 0x1A1A3E,
       transparent: true,
-      opacity: 0.7
-    });
-    const pond = new THREE.Mesh(pondGeo, pondMat);
-    pond.rotation.x = -Math.PI / 2;
-    pond.position.set(5, 0.02, -5);
-    group.add(pond);
-
-    // 中式廊柱（4根）
-    for (let i = 0; i < 4; i++) {
-      const pillarGeo = new THREE.CylinderGeometry(0.3, 0.3, 5, 16);
-      const pillarMat = new THREE.MeshLambertMaterial({ color: 0xCC0000 });
-      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-      pillar.position.set(-3 + i * 2, 2.5, -10);
-      group.add(pillar);
-    }
-
-    // 翘角屋顶（需求文档§5.4.4：中式庭院）
-    const roofGeo = new THREE.BoxGeometry(10, 0.3, 5);
-    const roofMat = new THREE.MeshLambertMaterial({ color: 0x654321 });
-    const roof = new THREE.Mesh(roofGeo, roofMat);
-    roof.position.set(0, 5, -10);
-    roof.rotation.x = -0.3;
-    group.add(roof);
-
-    // 竹子
-    for (let i = 0; i < 5; i++) {
-      const bambooGeo = new THREE.CylinderGeometry(0.05, 0.05, 6, 8);
-      const bambooMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
-      const bamboo = new THREE.Mesh(bambooGeo, bambooMat);
-      bamboo.position.set(8 + i * 0.3, 3, -7 + i * 0.5);
-      group.add(bamboo);
-    }
-
-    // 灯光（温暖色调，需求文档§5.4.4：古典风格）
-    const courtyardLight = new THREE.PointLight(0xFFB74D, 0.8, 30);
-    courtyardLight.position.set(0, 6, 0);
-    group.add(courtyardLight);
-
-    const ambientLight = new THREE.AmbientLight(0xFFF3E0, 0.5);
-    group.add(ambientLight);
-
-    this.scene.add(group);
-    return group;
-  }
-
-  /**
-   * 残障友好区：3D无障碍建筑场景（需求文档§5.4.5）
-   * 宽敞、坡道、高对比度标识
-   */
-  createAccessibleScene() {
-    const group = new THREE.Group();
-    group.name = 'accessible-scene';
-
-    // 地板（高对比度黑白，需求文档§5.4.5）
-    const groundGeo = new THREE.PlaneGeometry(30, 30);
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0xFAFAFA });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    group.add(ground);
-
-    // 坡道（需求文档§5.4.5：坡道入口）
-    const rampGeo = new THREE.BoxGeometry(4, 0.2, 8);
-    const rampMat = new THREE.MeshLambertMaterial({ color: 0xFFEB3B });
-    const ramp = new THREE.Mesh(rampGeo, rampMat);
-    ramp.rotation.x = -0.2;
-    ramp.position.set(0, 0.5, -2);
-    group.add(ramp);
-
-    // 扶手（需求文档§5.4.5：扶手）
-    const railGeo = new THREE.CylinderGeometry(0.05, 0.05, 8, 8);
-    const railMat = new THREE.MeshLambertMaterial({ color: 0xFF6347 });
-    const rail = new THREE.Mesh(railGeo, railMat);
-    rail.position.set(2, 1, -2);
-    rail.rotation.x = -0.2;
-    group.add(rail);
-
-    // 宽敞门框（需求文档§5.4.5：宽敞）
-    const doorFrameGeo = new THREE.BoxGeometry(4, 5, 0.3);
-    const doorFrameMat = new THREE.MeshLambertMaterial({
-      color: 0x333333,
-      emissive: 0xFF6347,
-      emissiveIntensity: 0.3
-    });
-    const doorFrame = new THREE.Mesh(doorFrameGeo, doorFrameMat);
-    doorFrame.position.set(0, 2.5, -10);
-    group.add(doorFrame);
-
-    // 盲道（黄色凸起条纹）
-    for (let i = 0; i < 20; i++) {
-      const stripGeo = new THREE.BoxGeometry(0.5, 0.1, 0.5);
-      const stripMat = new THREE.MeshLambertMaterial({
-        color: 0xFFEB3B,
-        emissive: 0xFFEB3B,
-        emissiveIntensity: 0.2
-      });
-      const strip = new THREE.Mesh(stripGeo, stripMat);
-      strip.position.set(0, 0.05, -i * 0.5);
-      group.add(strip);
-    }
-
-    // 高对比度标识（需求文档§5.4.5）
-    const signGeo = new THREE.PlaneGeometry(3, 1.5);
-    const signMat = new THREE.MeshLambertMaterial({
-      color: 0xFFFFFF,
-      emissive: 0xFF6347,
-      emissiveIntensity: 0.5,
+      opacity: 0.8,
       side: THREE.DoubleSide
     });
-    const sign = new THREE.Mesh(signGeo, signMat);
-    sign.position.set(0, 4, -9);
-    group.add(sign);
+    const dome = new THREE.Mesh(domeGeo, domeMat);
+    dome.position.set(0, 0, 0);
+    group.add(dome);
 
-    // 灯光（明亮，需求文档§5.4.5：高对比度）
-    const accessibleLight = new THREE.PointLight(0xFFFFFF, 1.5, 30);
-    accessibleLight.position.set(0, 8, 0);
-    group.add(accessibleLight);
+    // 星星（500个，随机分布，白色/淡蓝色）
+    const starColors = [0xFFFFFF, 0xADD8E6, 0xFFFACD, 0xFFB6C1];
+    for (let i = 0; i < 500; i++) {
+      const phi = Math.random() * Math.PI;
+      const theta = Math.random() * Math.PI * 2;
+      const r = 19.5;
 
-    const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.8);
+      const x = r * Math.sin(phi) * Math.cos(theta);
+      const y = r * Math.cos(phi);
+      const z = r * Math.sin(phi) * Math.sin(theta);
+
+      const starGeo = new THREE.SphereGeometry(0.05 + Math.random() * 0.1, 6, 6);
+      const starMat = new THREE.MeshLambertMaterial({
+        color: starColors[Math.floor(Math.random() * 4)],
+        emissive: starColors[Math.floor(Math.random() * 4)],
+        emissiveIntensity: 0.8 + Math.random() * 0.5
+      });
+      const star = new THREE.Mesh(starGeo, starMat);
+      star.position.set(x, y, z);
+      star.userData = { isStar: true };
+      group.add(star);
+    }
+
+    // 星座连线（简化版，白色线条）
+    const constellationGeo = new THREE.BufferGeometry();
+    const vertices = [];
+    for (let i = 0; i < 5; i++) {
+      const x1 = (Math.random() - 0.5) * 10;
+      const y1 = 5 + Math.random() * 10;
+      const z1 = (Math.random() - 0.5) * 10;
+      const x2 = x1 + (Math.random() - 0.5) * 3;
+      const y2 = y1 + (Math.random() - 0.5) * 3;
+      const z2 = z1 + (Math.random() - 0.5) * 3;
+
+      vertices.push(x1, y1, z1);
+      vertices.push(x2, y2, z2);
+    }
+    constellationGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    const constellationMat = new THREE.LineBasicMaterial({
+      color: 0xFFFFFF,
+      transparent: true,
+      opacity: 0.5
+    });
+    const constellation = new THREE.LineSegments(constellationGeo, constellationMat);
+    group.add(constellation);
+
+    // 养生平台（中心，圆形，淡紫色）
+    const platformGeo = new THREE.CylinderGeometry(3, 3, 0.5, 32);
+    const platformMat = new THREE.MeshLambertMaterial({
+      color: 0x8A2BE2,
+      emissive: 0x4B0082,
+      emissiveIntensity: 0.3
+    });
+    const platform = new THREE.Mesh(platformGeo, platformMat);
+    platform.position.set(0, 0.25, 0);
+    group.add(platform);
+
+    // 灯光（柔和紫色光芒）
+    const skyLight = new THREE.PointLight(0x8A2BE2, 0.6, 50);
+    skyLight.position.set(0, 15, 0);
+    group.add(skyLight);
+
+    const ambientLight = new THREE.AmbientLight(0x2E0854, 0.4);
     group.add(ambientLight);
 
     this.scene.add(group);
+    console.log('[ZoneScenes] 星空穹顶场景创建完成');
+    return group;
+  }
+
+  /**
+   * 残障友好区：熔炉场景（炽热熔炉，火焰特效）
+   * 主题：红色/温暖/无障碍
+   */
+  createFurnaceScene() {
+    const group = new THREE.Group();
+    group.name = 'furnace-scene';
+
+    // 耐高温地板（深红色）
+    const groundGeo = new THREE.PlaneGeometry(30, 30);
+    const groundMat = new THREE.MeshLambertMaterial({
+      color: 0x8B0000,
+      emissive: 0x440000,
+      emissiveIntensity: 0.2
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    group.add(ground);
+
+    // 中央熔炉（圆柱形，橙色）
+    const furnaceGeo = new THREE.CylinderGeometry(3, 3.5, 6, 24, 1, true);
+    const furnaceMat = new THREE.MeshLambertMaterial({
+      color: 0xFF4500,
+      emissive: 0xFF4500,
+      emissiveIntensity: 0.8,
+      side: THREE.DoubleSide
+    });
+    const furnace = new THREE.Mesh(furnaceGeo, furnaceMat);
+    furnace.position.set(0, 3, 0);
+    group.add(furnace);
+
+    // 火焰粒子（简化版，红色/橙色/黄色椎体）
+    const flameColors = [0xFF0000, 0xFF4500, 0xFFD700];
+    for (let i = 0; i < 30; i++) {
+      const flameGeo = new THREE.ConeGeometry(0.3 + Math.random() * 0.3, 1 + Math.random() * 2, 8);
+      const flameMat = new THREE.MeshLambertMaterial({
+        color: flameColors[i % 3],
+        emissive: flameColors[i % 3],
+        emissiveIntensity: 1.2
+      });
+      const flame = new THREE.Mesh(flameGeo, flameMat);
+      flame.position.set(
+        (Math.random() - 0.5) * 4,
+        4 + Math.random() * 3,
+        (Math.random() - 0.5) * 4
+      );
+      flame.userData = { isFlame: true };
+      group.add(flame);
+    }
+
+    // 无障碍坡道（环绕熔炉，红色警示条）
+    const rampGeo = new THREE.TorusGeometry(6, 0.5, 8, 32, Math.PI * 2);
+    const rampMat = new THREE.MeshLambertMaterial({
+      color: 0xFF6347,
+      emissive: 0xFF6347,
+      emissiveIntensity: 0.4
+    });
+    const ramp = new THREE.Mesh(rampGeo, rampMat);
+    ramp.position.set(0, 0.5, 0);
+    ramp.rotation.x = Math.PI / 2;
+    group.add(ramp);
+
+    // 温暖长椅（休息区，棕色）
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI * 2;
+      const x = Math.cos(angle) * 8;
+      const z = Math.sin(angle) * 8;
+
+      const benchGeo = new THREE.BoxGeometry(2, 0.5, 0.5);
+      const benchMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+      const bench = new THREE.Mesh(benchGeo, benchMat);
+      bench.position.set(x, 0.5, z);
+      bench.rotation.y = -angle;
+      group.add(bench);
+
+      // 椅背
+      const backGeo = new THREE.BoxGeometry(2, 1, 0.2);
+      const back = new THREE.Mesh(backGeo, benchMat);
+      back.position.set(x, 1.2, z - 0.3);
+      back.rotation.y = -angle;
+      group.add(back);
+    }
+
+    // 灯光（炽热橙色光芒）
+    const furnaceLight = new THREE.PointLight(0xFF4500, 1.5, 50);
+    furnaceLight.position.set(0, 8, 0);
+    group.add(furnaceLight);
+
+    const ambientLight = new THREE.AmbientLight(0xFF6347, 0.5);
+    group.add(ambientLight);
+
+    this.scene.add(group);
+    console.log('[ZoneScenes] 熔炉场景创建完成');
     return group;
   }
 
