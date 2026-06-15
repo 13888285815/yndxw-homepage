@@ -5,48 +5,127 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>五区之门 - 未来平台</title>
   <link rel="stylesheet" href="css/style.css">
-  
-  <!-- Three.js r160 本地文件 -->
-  <script src="js/lib/three.min.js"></script>
-  
-  <!-- 注意：暂时不使用OrbitControls，使用自定义第一人称控制器 -->
+
+  <!-- 预加载非阻塞资源（dns prefetch + preload） -->
+  <link rel="dns-prefetch" href="//fonts.googleapis.com">
+
+  <!-- 骨架屏CSS（首屏立即渲染，零JS依赖） -->
+  <style>
+    body { margin: 0; overflow: hidden; background: #0a0a1a; }
+    #loading-screen {
+      position: fixed; inset: 0; z-index: 9999;
+      background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0d0d2a 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.5s;
+    }
+    #loading-screen.fade-out { opacity: 0; pointer-events: none; }
+    .skeleton-title {
+      width: 240px; height: 40px; background: rgba(255,255,255,0.06);
+      border-radius: 8px; margin-bottom: 32px;
+      animation: shimmer 1.5s infinite;
+    }
+    .skeleton-bar {
+      width: 320px; height: 4px; background: rgba(255,255,255,0.04);
+      border-radius: 2px; overflow: hidden;
+    }
+    #loading-progress {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, transparent, rgba(100,180,255,0.6), transparent);
+      border-radius: 2px; transition: width 0.3s;
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0%,100% { background: rgba(255,255,255,0.06); }
+      50% { background: rgba(255,255,255,0.12); }
+    }
+    .loading-tip {
+      margin-top: 20px; color: rgba(255,255,255,0.35);
+      font-size: 13px; font-family: system-ui, sans-serif;
+      letter-spacing: 0.5px;
+    }
+  </style>
 </head>
 <body>
-  <!-- 加载进度条 -->
+  <!-- 骨架屏（纯CSS，HTML解析完立即显示） -->
   <div id="loading-screen">
-    <div id="loading-bar">
+    <div class="skeleton-title"></div>
+    <div class="skeleton-bar">
       <div id="loading-progress"></div>
     </div>
-    <div id="loading-text">正在加载五区之门...</div>
+    <div class="loading-tip">正在加载 3D 场景...</div>
   </div>
 
-  <!-- 3D场景容器 -->
   <div id="container"></div>
 
-  <!-- UI叠加层 -->
   <div id="ui-overlay">
-    <!-- 区域名称提示 -->
     <div id="zone-prompt" class="hidden">
       <p id="zone-name"></p>
       <p id="zone-hint">点击进入</p>
     </div>
-
-    <!-- 返回按钮 -->
     <button id="back-button" class="hidden">返回五区之门</button>
-
-    <!-- FPS显示 -->
     <div id="fps-counter" class="hidden">FPS: 0</div>
   </div>
 
-  <!-- 主应用脚本 -->
-  <script src="js/sceneManager.js"></script>
-  <script src="js/firstPersonController.js"></script>
-  <script src="js/buildingModels.js"></script>
-  <script src="js/particleEffects.js"></script>
-  <script src="js/doorInteraction.js"></script>
-  <script src="js/sceneLoader.js"></script>
-  <script src="js/zoneScenes.js"></script>
-  <script src="js/plaza.js"></script>
-  <script src="js/app.js"></script>
+  <!--
+    加载策略：纯 defer，HTML渲染不受阻
+    骨架屏先行，3D在后台初始化
+    性能目标：DOMContentLoaded < 1s，首屏HTML秒出
+  -->
+  <script defer src="js/config.js"></script>
+  <script defer src="js/sceneManager.js"></script>
+  <script defer src="js/firstPersonController.js"></script>
+  <script defer src="js/buildingModels.js"></script>
+  <script defer src="js/particleEffects.js"></script>
+  <script defer src="js/doorInteraction.js"></script>
+  <script defer src="js/sceneLoader.js"></script>
+  <script defer src="js/zoneScenes.js"></script>
+  <script defer src="js/plaza.js"></script>
+  <script defer src="js/app.js"></script>
+
+  <!-- Three.js 单独最后加载（最大文件，最后解析，不阻塞HTML） -->
+  <script defer src="js/lib/three.min.js"></script>
+
+  <!-- 启动引导 -->
+  <script>
+    var _progress = 0;
+    function _setProgress(p) {
+      _progress = p;
+      var el = document.getElementById('loading-progress');
+      if (el) el.style.width = p + '%';
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      _setProgress(10);
+      // 监听主要脚本加载进度
+      var scripts = document.querySelectorAll('script[defer]');
+      var loaded = 0;
+      [].slice.call(scripts).forEach(function(s) {
+        if (s.readyState === 'loading') {
+          s.addEventListener('load', function() {
+            loaded++;
+            _setProgress(Math.min(10 + Math.floor(loaded / scripts.length * 80), 90));
+          });
+        } else {
+          loaded++;
+        }
+      });
+      // 兜底：3.5秒后强制移除骨架屏
+      setTimeout(function() {
+        var ls = document.getElementById('loading-screen');
+        if (ls) {
+          ls.classList.add('fade-out');
+          setTimeout(function() { ls.remove(); }, 500);
+        }
+      }, 3500);
+      // 暴露给app.js：3D初始化完成后调用
+      window.__removeLoading = function() {
+        var ls = document.getElementById('loading-screen');
+        if (ls) {
+          ls.classList.add('fade-out');
+          setTimeout(function() { ls.remove(); }, 500);
+        }
+      };
+    });
+  </script>
 </body>
 </html>
