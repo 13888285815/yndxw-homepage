@@ -14,6 +14,13 @@ body {
   color: #fff;
 }
 
+/* Three.js canvas全屏铺满 */
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 /* 3D场景容器 */
 #container {
   width: 100vw;
@@ -174,4 +181,26 @@ body {
     padding: 8px 15px;
     font-size: 14px;
   }
+}
+
+/* 2D区域界面叠加层 */
+#zone-2d-interface {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+/* 2D降级界面 */
+#fallback-2d {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  overflow-y: auto;
 }

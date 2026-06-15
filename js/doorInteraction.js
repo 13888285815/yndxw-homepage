@@ -9,6 +9,8 @@ class DoorInteraction {
     this.scene = scene;
     this.doors = [];
     this.currentHoveredDoor = null;
+    this.raycaster = null;
+    this.mouse = new THREE.Vector2();
     
     // 配置
     this.config = {
@@ -60,20 +62,46 @@ class DoorInteraction {
    */
   initClickEvent() {
     const container = document.getElementById('container');
+    this.raycaster = new THREE.Raycaster();
     
-    // PC端：鼠标点击
+    // PC端：鼠标点击 — 使用Raycaster精确检测
     container.addEventListener('click', (event) => {
-      if (this.currentHoveredDoor) {
-        this.openDoor(this.currentHoveredDoor);
-      }
+      this.handleClick(event.clientX, event.clientY);
     });
 
-    // 移动端：触摸点击
+    // 移动端：触摸点击 — 使用Raycaster精确检测
     container.addEventListener('touchend', (event) => {
-      if (this.currentHoveredDoor) {
-        this.openDoor(this.currentHoveredDoor);
+      if (event.changedTouches.length > 0) {
+        const touch = event.changedTouches[0];
+        this.handleClick(touch.clientX, touch.clientY);
       }
     });
+  }
+
+  /**
+   * 处理点击：Raycaster射线检测门对象
+   */
+  handleClick(clientX, clientY) {
+    // 归一化鼠标坐标 (-1 到 +1)
+    this.mouse.x = (clientX / window.innerWidth) * 2 - 1;
+    this.mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+    
+    // 从相机发射射线
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    
+    // 检测与门的交叉
+    const intersects = this.raycaster.intersectObjects(this.doors, false);
+    
+    if (intersects.length > 0) {
+      const clickedDoor = intersects[0].object;
+      // 再次确认距离在交互范围内
+      const distance = this.camera.position.distanceTo(clickedDoor.position);
+      if (distance <= this.config.interactDistance && !clickedDoor.userData.isOpen) {
+        this.openDoor(clickedDoor);
+      }
+    } else if (this.currentHoveredDoor && !this.currentHoveredDoor.userData.isOpen) {
+      // 点击空白处无操作（保留当前悬停门的提示）
+    }
   }
 
   /**

@@ -4,6 +4,18 @@
  * 严格按照需求文档v2.1（§5.2）实现
  */
 
+// 生产环境静默console.log（保留warn/error）
+if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+  const _origLog = console.log;
+  console.log = function() {
+    // 仅保留[App3D]和[SceneManager]关键日志
+    const msg = Array.from(arguments).join(' ');
+    if (msg.includes('[ERROR]') || msg.includes('[CRITICAL]')) {
+      _origLog.apply(console, arguments);
+    }
+  };
+}
+
 // 主应用类
 class App3D {
   constructor() {
@@ -306,7 +318,8 @@ class App3D {
     overlay.innerHTML = content;
     overlay.style.display = 'block';
     
-    // 隐藏3D场景的canvas
+    // 隐藏3D场景的canvas并暂停渲染（节省GPU）
+    this.pauseRendering();
     const canvas = document.querySelector('canvas');
     if (canvas) canvas.style.display = 'none';
   }
@@ -366,9 +379,10 @@ class App3D {
     const overlay = document.getElementById('zone-2d-interface');
     if (overlay) overlay.style.display = 'none';
     
-    // 显示3D场景的canvas
+    // 显示3D场景的canvas并恢复渲染
     const canvas = document.querySelector('canvas');
     if (canvas) canvas.style.display = 'block';
+    this.resumeRendering();
     
     // 恢复主场景的建筑和门
     this.showMainSceneObjects();
@@ -387,13 +401,38 @@ class App3D {
   }
 
   startRenderLoop() {
+    this._animFrameId = null;
+    this._isRendering = true;
+    
     const loop = () => {
-      requestAnimationFrame(loop);
+      if (!this._isRendering) return;
+      this._animFrameId = requestAnimationFrame(loop);
       if (this.doorInteraction) this.doorInteraction.update();
       if (this.particleEffects) this.particleEffects.update();
       this.sceneManager.render();
     };
     loop();
+  }
+
+  /**
+   * 暂停渲染（2D界面显示时节省GPU）
+   */
+  pauseRendering() {
+    this._isRendering = false;
+    if (this._animFrameId) {
+      cancelAnimationFrame(this._animFrameId);
+      this._animFrameId = null;
+    }
+  }
+
+  /**
+   * 恢复渲染
+   */
+  resumeRendering() {
+    if (!this._isRendering) {
+      this._isRendering = true;
+      this.startRenderLoop();
+    }
   }
 
   initUIEvents() {

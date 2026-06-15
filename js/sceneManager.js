@@ -9,6 +9,7 @@ class SceneManager {
     this.camera = null;
     this.renderer = null;
     this.buildings = [];
+    this._initialCameraPos = null;  // 保存初始相机位置
     this.doors = [];
     
     // 配置
@@ -45,6 +46,7 @@ class SceneManager {
       this.config.cameraFar
     );
     this.camera.position.set(0, this.config.cameraHeight, 30);
+    this._initialCameraPos = this.camera.position.clone();
     this.camera.lookAt(0, this.config.cameraHeight, 0);
 
     // 创建渲染器
@@ -316,7 +318,7 @@ class SceneManager {
    */
   resetCamera(callback) {
     console.log('[SceneManager] 重置镜头到主场景...');
-    const targetPos = new THREE.Vector3(0, this.config.cameraHeight, 30);
+    const targetPos = this._initialCameraPos ? this._initialCameraPos.clone() : new THREE.Vector3(0, this.config.cameraHeight, 30);
     this.pushCamera(targetPos, 2000, callback);
   }
 }
