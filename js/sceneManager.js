@@ -9,6 +9,8 @@ class SceneManager {
     this.camera = null;
     this.renderer = null;
     this.buildings = [];
+    this.highlightedBuilding = null;  // 当前高亮的建筑
+    this.highlightRing = null;      // 高亮光环
     this._initialCameraPos = null;  // 保存初始相机位置
     this.doors = [];
     
@@ -55,6 +57,12 @@ class SceneManager {
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+    // 初始化高亮光环
+    this._initHighlightRing();
+    
+    // 初始化共享广场导航柱（需求文档§5.3）
+    this._initPlazaPillars();
     document.getElementById('container').appendChild(this.renderer.domElement);
 
     // 添加光照
@@ -239,6 +247,8 @@ class SceneManager {
     requestAnimationFrame(() => this.render());
     // 更新水面动画
     this.updateWater();
+    // 更新共享广场导航柱动画（呼吸+旋转）
+    this._updatePlazaPillars();
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -287,6 +297,144 @@ class SceneManager {
    */
   getRenderer() {
     return this.renderer;
+  }
+
+  /**
+   * 初始化建筑高亮光环（需求文档§5.2.3）
+   */
+  _initHighlightRing() {
+    const ringGeo = new THREE.RingGeometry(4.5, 5.5, 64);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x00ff88,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide
+    });
+    this.highlightRing = new THREE.Mesh(ringGeo, ringMat);
+    this.highlightRing.rotation.x = -Math.PI / 2;
+    this.highlightRing.position.y = 0.1;
+    this.highlightRing.visible = false;
+    this.scene.add(this.highlightRing);
+  }
+
+  /**
+   * 初始化共享广场导航柱（需求文档§5.3 - 共享广场）
+   * 5根发光柱子，均匀分布在建筑之间的外圈
+   */
+  _initPlazaPillars() {
+    this.plazaPillars = [];
+    const pillarCount = 5;
+    const radius = 14;  // 略小于建筑距离
+    const pillarNames = ['智能对话', '任务中心', '技能市场', '数字展览', '系统设置'];
+    const pillarColors = [0x6366f1, 0x8b5cf6, 0x10b981, 0xf59e0b, 0x6b7280];
+    
+    // 偏移角度，使柱子位于建筑之间
+    const offset = Math.PI / 5;
+    
+    for (let i = 0; i < pillarCount; i++) {
+      const angle = offset + (2 * Math.PI * i) / pillarCount;
+      const x = radius * Math.cos(angle);
+      const z = radius * Math.sin(angle);
+      
+      // 发光柱体
+      const pillarGeo = new THREE.CylinderGeometry(0.3, 0.5, 3, 8);
+      const pillarMat = new THREE.MeshPhysicalMaterial({
+        color: pillarColors[i % pillarColors.length],
+        emissive: pillarColors[i % pillarColors.length],
+        emissiveIntensity: 0.5,
+        transparent: true,
+        opacity: 0.8,
+        metalness: 0.3,
+        roughness: 0.7
+      });
+      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+      pillar.position.set(x, 1.5, z);
+      pillar.userData = { type: 'plaza_pillar', name: pillarNames[i], index: i };
+      this.scene.add(pillar);
+      this.plazaPillars.push(pillar);
+      
+      // 柱顶发光球
+      const glowGeo = new THREE.SphereGeometry(0.5, 8, 8);
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: pillarColors[i % pillarColors.length],
+        transparent: true,
+        opacity: 0.7
+      });
+      const glow = new THREE.Mesh(glowGeo, glowMat);
+      glow.position.set(x, 3.5, z);
+      glow.userData = { type: 'plaza_glow', pillarIndex: i };
+      this.scene.add(glow);
+    }
+    
+    console.log('[SceneManager] 共享广场导航柱初始化完成');
+  }
+
+  /**
+   * 高亮指定建筑
+   * @param {THREE.Group|null} building - 要高亮的建筑，null清除高亮
+   */
+  highlightBuilding(building) {
+    // 恢复上次高亮的建筑
+    if (this.highlightedBuilding && this.highlightedBuilding !== building) {
+      this.highlightedBuilding.traverse(child => {
+        if (child.isMesh && child._origEmissive !== undefined) {
+          child.material.emissive.setHex(child._origEmissive);
+          child.material.emissiveIntensity = 0;
+        }
+      });
+    }
+    
+    if (building) {
+      // 高亮新建筑
+      building.traverse(child => {
+        if (child.isMesh && child.material) {
+          if (child._origEmissive === undefined) {
+            child._origEmissive = child.material.emissive ? child.material.emissive.getHex() : 0;
+          }
+          child.material.emissive = child.material.emissive || new THREE.Color(0x00ff88);
+          child.material.emissive.setHex(0x00ff88);
+          child.material.emissiveIntensity = 0.3;
+        }
+      });
+      
+      // 显示高亮光环
+      this.highlightRing.position.x = building.position.x;
+      this.highlightRing.position.z = building.position.z;
+      this.highlightRing.visible = true;
+      this.highlightRing.material.opacity = 0.6;
+    } else {
+      // 清除高亮
+      if (this.highlightRing) {
+        this.highlightRing.visible = false;
+        this.highlightRing.material.opacity = 0;
+      }
+    }
+    
+    this.highlightedBuilding = building;
+  }
+
+  /**
+   * 更新导航柱动画效果（共享广场§5.3）
+   * 呼吸光效 + 上下浮动
+   */
+  _updatePlazaPillars() {
+    if (!this.plazaPillars || !this.plazaPillars.length) return;
+    const time = Date.now() * 0.001;
+    
+    this.plazaPillars.forEach((pillar, i) => {
+      const breathe = Math.sin(time * 2 + i * 1.256) * 0.3 + 0.5;
+      pillar.material.emissiveIntensity = breathe;
+      pillar.material.opacity = 0.5 + breathe * 0.3;
+      pillar.position.y = 1.5 + Math.sin(time * 0.8 + i * 1.256) * 0.2;
+    });
+    
+    this.scene.children.forEach(child => {
+      if (child.userData && child.userData.type === 'plaza_glow') {
+        const breathe = Math.sin(Date.now() * 0.002 + child.userData.pillarIndex * 1.256) * 0.3 + 0.5;
+        child.material.opacity = breathe * 0.8;
+        child.scale.setScalar(0.8 + breathe * 0.2);
+      }
+    });
   }
 
   /**

@@ -235,6 +235,26 @@ class DoorInteraction {
     }
     this.doors = [];
   }
+
+  /**
+   * 获取距离玩家最近的门的完整数据（含building引用）
+   * @returns {Object|null} 最近的门数据对象
+   */
+  getNearestDoor() {
+    if (!this.doors.length || !this.camera) return null;
+    let nearestDoor = null;
+    let minDist = this.config.highlightRadius;
+
+    this.doors.forEach(doorData => {
+      const dist = this.camera.position.distanceTo(doorData.mesh.position);
+      if (dist < minDist) {
+        minDist = dist;
+        nearestDoor = doorData;
+      }
+    });
+
+    return nearestDoor;
+  }
 }
 
 // 导出

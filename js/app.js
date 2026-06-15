@@ -164,6 +164,7 @@ class App3D {
         mesh: door,
         zoneName: zone.name,
         zoneId: zone.id,
+        building: building,
         onEnter: () => this.enterZone(zone.id, zone.name)
       });
     });
@@ -416,7 +417,16 @@ class App3D {
       if (elapsed < this._frameInterval * 0.9) return;  // 允许10%波动
       
       this._lastRenderTime = timestamp;
-      if (this.doorInteraction) this.doorInteraction.update();
+      if (this.doorInteraction) {
+        this.doorInteraction.update();
+        // 建筑悬停高亮（需求文档§5.2.3）
+        const nearestDoor = this.doorInteraction.getNearestDoor();
+        if (nearestDoor && nearestDoor.building) {
+          this.sceneManager.highlightBuilding(nearestDoor.building);
+        } else {
+          this.sceneManager.highlightBuilding(null);
+        }
+      }
       if (this.particleEffects) this.particleEffects.update();
       this.sceneManager.render();
     };
