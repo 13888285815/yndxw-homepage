@@ -403,15 +403,24 @@ class App3D {
   startRenderLoop() {
     this._animFrameId = null;
     this._isRendering = true;
+    this._lastRenderTime = 0;
+    this._targetFPS = 60;  // 目标帧率（可动态调整）
+    this._frameInterval = 1000 / this._targetFPS;
     
-    const loop = () => {
+    const loop = (timestamp) => {
       if (!this._isRendering) return;
       this._animFrameId = requestAnimationFrame(loop);
+      
+      // 帧率控制：仅在间隔足够时渲染
+      const elapsed = timestamp - this._lastRenderTime;
+      if (elapsed < this._frameInterval * 0.9) return;  // 允许10%波动
+      
+      this._lastRenderTime = timestamp;
       if (this.doorInteraction) this.doorInteraction.update();
       if (this.particleEffects) this.particleEffects.update();
       this.sceneManager.render();
     };
-    loop();
+    this._animFrameId = requestAnimationFrame(loop);
   }
 
   /**

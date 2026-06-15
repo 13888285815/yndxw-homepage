@@ -52,6 +52,7 @@ class ParticleEffects {
     points.visible = false;
     this.scene.add(points);
     this.particles.firefly = points;
+    points.matrixAutoUpdate = false; points.updateMatrix();
   }
 
   /* ========== 飘云 ========== */
@@ -109,6 +110,7 @@ class ParticleEffects {
     points.visible = false;
     this.scene.add(points);
     this.particles.cherry = points;
+    points.matrixAutoUpdate = false; points.updateMatrix();
   }
 
   /* ========== 星星闪烁 ========== */
@@ -142,6 +144,7 @@ class ParticleEffects {
     points.visible = false;
     this.scene.add(points);
     this.particles.stars = points;
+    points.matrixAutoUpdate = false; points.updateMatrix();
   }
 
   /**
