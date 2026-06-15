@@ -8,6 +8,8 @@
 
   <!-- 预加载提示（不阻塞，仅提示浏览器提前建立连接） -->
   <link rel="dns-prefetch" href="//fonts.googleapis.com">
+  <link rel="preconnect" href="https://13888285815.github.io">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
 
   <!-- 骨架屏CSS（首屏立即渲染，零JS依赖） -->
   <style>
@@ -67,9 +69,11 @@
   </div>
 
   <!--
-    加载策略：Three.js动态按需加载，WebGL检测后才下载654KB
-    业务模块在Three.js加载完成后顺序注入
-    首屏HTML+CSS骨架屏秒出，DOMContentLoaded < 200ms
+    加载策略：
+    1. HTML+CSS骨架屏：DOMContentLoaded < 200ms（纯静态，无JS依赖）
+    2. Three.js：window.load 后 requestIdleCallback 触发（不在首屏关键路径）
+    3. 业务模块：与Three.js同批次并行加载
+    4. preconnect：提前预解析外部域名
   -->
   <script>
   (function() {
@@ -119,29 +123,35 @@
 
       setProgress(10, '加载3D引擎...');
 
-      // 第一步：加载Three.js（654KB，按需下载）
-      loadJS('js/lib/three.min.js').then(function() {
-        setProgress(40, '初始化模块...');
+      // 第一步：Three.js 改为 window.load 后触发（让首屏骨架屏先渲染）
+      window.addEventListener('load', function onLoad() {
+        window.removeEventListener('load', onLoad);
+        var doIdle = window.requestIdleCallback || function(cb) { setTimeout(cb, 0); };
+        doIdle(function() {
+          loadJS('js/lib/three.min.js').then(function() {
+            setProgress(40, '初始化模块...');
 
-        // 第二步：顺序加载业务模块（保证依赖）
-        return loadSeq([
-          'js/config.js',
-          'js/sceneManager.js',
-          'js/firstPersonController.js',
-          'js/buildingModels.js',
-          'js/particleEffects.js',
-          'js/doorInteraction.js',
-          'js/sceneLoader.js',
-          'js/zoneScenes.js',
-          'js/plaza.js',
-          'js/zonePanels.js',
-          'js/app.js'
-        ]);
-      }).then(function() {
-        setProgress(90, '启动中...');
-      }).catch(function(err) {
-        console.error('[Loader] 加载失败:', err);
-        hideLoading();
+            // 第二步：业务模块并行加载（模块间无依赖关系）
+            return Promise.all([
+              loadJS('js/config.js'),
+              loadJS('js/sceneManager.js'),
+              loadJS('js/firstPersonController.js'),
+              loadJS('js/buildingModels.js'),
+              loadJS('js/particleEffects.js'),
+              loadJS('js/doorInteraction.js'),
+              loadJS('js/sceneLoader.js'),
+              loadJS('js/zoneScenes.js'),
+              loadJS('js/plaza.js'),
+              loadJS('js/zonePanels.js'),
+              loadJS('js/app.js')
+            ]);
+          }).then(function() {
+            setProgress(90, '启动中...');
+          }).catch(function(err) {
+            console.error('[Loader] 加载失败:', err);
+            hideLoading();
+          });
+        });
       });
 
       // 兜底超时
