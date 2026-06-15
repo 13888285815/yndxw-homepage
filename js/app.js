@@ -66,6 +66,7 @@ class App3D {
     );
 
     this.initUIEvents();
+    this.initKeyboardNavigation();
   }
 
   /**
@@ -399,6 +400,9 @@ class App3D {
     
     // 隐藏返回按钮
     document.getElementById('back-button').classList.add('hidden');
+    
+    // 清理语音按钮（老年区）
+    document.querySelectorAll('.voice-btn').forEach(btn => btn.remove());
     
     // 重置镜头到主场景位置
     this.sceneManager.resetCamera(() => {
