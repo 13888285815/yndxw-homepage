@@ -675,7 +675,9 @@ class SceneManager {
       });
       const pillar = new THREE.Mesh(pillarGeo, pillarMat);
       pillar.position.set(x, 1.5, z);
-      pillar.userData = { type: 'plaza_pillar', name: pillarNames[i], index: i };
+      pillar.userData = {
+        clickable: true,
+        action: 'plaza', type: 'plaza_pillar', name: pillarNames[i], index: i };
       this.scene.add(pillar);
       this.plazaPillars.push(pillar);
       

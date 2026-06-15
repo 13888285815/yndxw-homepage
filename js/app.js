@@ -44,6 +44,9 @@ class App3D {
 
     // 2. 场景加载器（需求文档§5.2.6第4模块）
     this.sceneLoader = new window.SceneLoader();
+        
+        // 初始化共享广场模块
+        this.plaza = new window.Plaza();
 
     // 3. 预加载主场景（门模型优先）
     this.sceneLoader.preloadMainScene(
