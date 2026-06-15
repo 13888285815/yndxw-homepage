@@ -417,6 +417,12 @@ class App3D {
     this._targetFPS = 60;  // 目标帧率（可动态调整）
     this._frameInterval = 1000 / this._targetFPS;
     
+    // FPS计数器（需求文档§4性能优化）
+    this._fpsFrameCount = 0;
+    this._fpsLastTime = performance.now();
+    this._currentFPS = 60;
+    this._updateFPSCounter();
+    
     const loop = (timestamp) => {
       if (!this._isRendering) return;
       this._animFrameId = requestAnimationFrame(loop);
@@ -426,6 +432,16 @@ class App3D {
       if (elapsed < this._frameInterval * 0.9) return;  // 允许10%波动
       
       this._lastRenderTime = timestamp;
+      
+      // FPS计算
+      this._fpsFrameCount++;
+      const fpsElapsed = timestamp - this._fpsLastTime;
+      if (fpsElapsed >= 1000) {
+        this._currentFPS = Math.round((this._fpsFrameCount * 1000) / fpsElapsed);
+        this._fpsFrameCount = 0;
+        this._fpsLastTime = timestamp;
+        this._updateFPSDisplay();
+      }
       if (this.doorInteraction) {
         this.doorInteraction.update();
         // 建筑悬停高亮（需求文档§5.2.3）
@@ -467,6 +483,22 @@ class App3D {
     document.getElementById('back-button').addEventListener('click', () => {
       this.returnToMainScene();
     });
+    
+    // 开发模式快捷键（需求文档§4性能测试）
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      document.addEventListener('keydown', (e) => {
+        // P键：性能测试
+        if (e.key === 'p' || e.key === 'P') {
+          this.runPerformanceTest();
+        }
+        // F键：切换FPS显示
+        if (e.key === 'f' || e.key === 'F') {
+          const fpsEl = document.getElementById('fps-counter');
+          fpsEl.classList.toggle('hidden');
+        }
+      });
+      console.log('[App3D] 开发模式快捷键: P=性能测试, F=切换FPS显示');
+    }
   }
 
   showLoading() {
@@ -486,6 +518,103 @@ class App3D {
     setTimeout(() => {
       loadingScreen.style.display = 'none';
     }, 500);
+    
+    // 显示FPS计数器（生产环境可隐藏）
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      document.getElementById('fps-counter').classList.remove('hidden');
+    }
+  }
+  
+  /**
+   * 性能压力测试（需求文档§4）
+   * 创建100+个卡片对象测试渲染性能
+   */
+  runPerformanceTest() {
+    console.log('[App3D] 开始性能压力测试（100+卡片）...');
+    
+    const startTime = performance.now();
+    const cardCount = 150;
+    const cards = [];
+    
+    // 创建150个卡片对象
+    for (let i = 0; i < cardCount; i++) {
+      const cardGeo = new THREE.PlaneGeometry(1, 1.5);
+      const cardMat = new THREE.MeshLambertMaterial({
+        color: new THREE.Color().setHSL(i / cardCount, 0.7, 0.5),
+        side: THREE.DoubleSide
+      });
+      const card = new THREE.Mesh(cardGeo, cardMat);
+      
+      // 随机位置分布在场景周围
+      const angle = (i / cardCount) * Math.PI * 2;
+      const radius = 30 + Math.random() * 20;
+      card.position.set(
+        Math.cos(angle) * radius,
+        2 + Math.random() * 3,
+        Math.sin(angle) * radius
+      );
+      card.lookAt(0, card.position.y, 0);
+      
+      cards.push(card);
+      this.sceneManager.getScene().add(card);
+    }
+    
+    const loadTime = performance.now() - startTime;
+    console.log(`[App3D] 创建${cardCount}个卡片耗时: ${loadTime.toFixed(2)}ms`);
+    
+    // 监测10秒内的FPS表现
+    const testDuration = 10000;
+    const fpsSamples = [];
+    const sampleInterval = setInterval(() => {
+      fpsSamples.push(this._currentFPS);
+    }, 500);
+    
+    setTimeout(() => {
+      clearInterval(sampleInterval);
+      
+      // 清理测试卡片
+      cards.forEach(card => {
+        this.sceneManager.getScene().remove(card);
+        card.geometry.dispose();
+        card.material.dispose();
+      });
+      
+      // 统计结果
+      const avgFPS = Math.round(fpsSamples.reduce((a, b) => a + b, 0) / fpsSamples.length);
+      const minFPS = Math.min(...fpsSamples);
+      const maxFPS = Math.max(...fpsSamples);
+      
+      console.log('[App3D] 性能测试结果:');
+      console.log(`  - 卡片数量: ${cardCount}`);
+      console.log(`  - 加载时间: ${loadTime.toFixed(2)}ms`);
+      console.log(`  - 平均FPS: ${avgFPS}`);
+      console.log(`  - 最小FPS: ${minFPS}`);
+      console.log(`  - 最大FPS: ${maxFPS}`);
+      console.log(`  - 是否达标: ${avgFPS >= 55 ? '✅ PASS' : '❌ FAIL'}`);
+      
+      alert(`性能测试完成\n平均FPS: ${avgFPS}\n最小FPS: ${minFPS}\n状态: ${avgFPS >= 55 ? '✅通过' : '❌未达标'}`);
+    }, testDuration);
+    
+    return { cardCount, loadTime };
+  }
+  
+  /**
+   * 更新FPS显示
+   */
+  _updateFPSDisplay() {
+    const fpsElement = document.getElementById('fps-counter');
+    if (fpsElement && !fpsElement.classList.contains('hidden')) {
+      const color = this._currentFPS >= 55 ? '#4CAF50' : (this._currentFPS >= 30 ? '#FF9800' : '#F44336');
+      fpsElement.textContent = `FPS: ${this._currentFPS}`;
+      fpsElement.style.color = color;
+    }
+  }
+  
+  /**
+   * 启动FPS计数器定时更新
+   */
+  _updateFPSCounter() {
+    // FPS显示每秒更新一次（在loop中处理）
   }
 }
 
