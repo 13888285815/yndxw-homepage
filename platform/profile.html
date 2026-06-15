@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账户安全 - 未来平台</title>
+    <script src="config.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            color: #333;
+        }
+        header {
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4A90E2;
+            text-decoration: none;
+        }
+        .btn {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary { background: #4A90E2; color: white; }
+        .btn-secondary { background: transparent; color: #4A90E2; border: 1px solid #4A90E2; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn:hover { opacity: 0.85; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .card h2 .icon {
+            font-size: 1.3em;
+            margin-right: 0.5rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .status-enabled { background: #d4edda; color: #155724; }
+        .status-disabled { background: #f8d7da; color: #721c24; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .user-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .user-details h3 { margin-bottom: 0.25rem; }
+        .user-details p { color: #666; font-size: 0.9rem; }
+
+        /* TOTP 设置 */
+        .totp-setup-area {
+            display: none;
+        }
+        .totp-setup-area.active {
+            display: block;
+        }
+
+        .qr-container {
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+        .qr-container img {
+            max-width: 256px;
+            border: 8px solid #f8f9fa;
+            border-radius: 8px;
+            image-rendering: pixelated;
+        }
+        .qr-container p {
+            color: #666;
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+        }
+        .secret-text {
+            background: #f8f9fa;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            text-align: center;
+            margin: 1rem 0;
+            word-break: break-all;
+            user-select: all;
+        }
+
+        .activate-form {
+            display: flex;
+            gap: 0.75rem;
+            max-width: 400px;
+            margin: 1rem auto 0;
+        }
+        .activate-form input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            text-align: center;
+            letter-spacing: 0.5em;
+        }
+        .activate-form input:focus {
+            outline: none;
+            border-color: #4A90E2;
+        }
+
+        .disable-form {
+            max-width: 400px;
+            margin: 1rem auto 0;
+            text-align: center;
+        }
+        .disable-form input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            text-align: center;
+            letter-spacing: 0.5em;
+            margin-bottom: 0.75rem;
+        }
+        .disable-form input:focus {
+            outline: none;
+            border-color: #4A90E2;
+        }
+
+        .message {
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            text-align: center;
+            display: none;
+        }
+        .message.error { background: #fee; color: #c33; display: block; }
+        .message.success { background: #d4edda; color: #155724; display: block; }
+        .message.info { background: #d1ecf1; color: #0c5460; display: block; }
+
+        .action-row {
+            margin-top: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="index.html" class="logo">未来平台</a>
+            <div style="display:flex;gap:1rem;align-items:center;">
+                <span id="nav-username" style="color:#666;"></span>
+                <a href="index.html" class="btn btn-secondary">首页</a>
+                <button onclick="logout()" class="btn btn-secondary">登出</button>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <!-- 用户信息卡 -->
+        <div class="card">
+            <h2><span class="icon">👤</span>账户信息</h2>
+            <div class="user-info">
+                <div class="user-avatar" id="avatar-letter">U</div>
+                <div class="user-details">
+                    <h3 id="display-username">加载中...</h3>
+                    <p id="display-email">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 安全设置卡 -->
+        <div class="card">
+            <h2><span class="icon">🔒</span>两步验证（TOTP）</h2>
+            <p>使用 Authenticator 应用（如 Google Authenticator）生成一次性验证码，增强账户安全。</p>
+            
+            <div style="margin-top:1rem;">
+                当前状态：<span class="status-badge" id="totp-status-badge">加载中</span>
+            </div>
+
+            <!-- TOTP 未启用：显示设置按钮 -->
+            <div id="totp-disabled-section">
+                <div class="action-row">
+                    <button class="btn btn-primary" id="setup-btn" onclick="setupTOTP()">启用两步验证</button>
+                </div>
+            </div>
+
+            <!-- TOTP 设置区域（扫码+激活）-->
+            <div class="totp-setup-area" id="totp-setup-area">
+                <hr style="margin:1.5rem 0;border:none;border-top:1px solid #f0f0f0;">
+                <h3 style="margin-bottom:0.5rem;">📱 扫码绑定</h3>
+                <p style="color:#666;font-size:0.9rem;margin-bottom:1rem;">
+                    使用 Google Authenticator 或 Microsoft Authenticator 扫描下方二维码
+                </p>
+                <div class="qr-container">
+                    <img id="qr-image" alt="TOTP QR Code">
+                </div>
+                <p style="text-align:center;color:#999;font-size:0.85rem;">或手动输入密钥：</p>
+                <div class="secret-text" id="secret-text">-</div>
+
+                <h3 style="margin:1.5rem 0 0.5rem;">✅ 输入验证码激活</h3>
+                <p style="color:#666;font-size:0.9rem;margin-bottom:1rem;">输入 Authenticator 中显示的 6 位验证码以完成绑定</p>
+                <div class="activate-form">
+                    <input type="text" id="activate-code" placeholder="000000" maxlength="6" inputmode="numeric">
+                    <button class="btn btn-primary" id="activate-btn" onclick="activateTOTP()">激活</button>
+                </div>
+                <div class="message" id="activate-message"></div>
+                <div class="action-row">
+                    <button class="btn btn-secondary" onclick="cancelSetup()">取消</button>
+                </div>
+            </div>
+
+            <!-- TOTP 已启用：显示禁用按钮 -->
+            <div id="totp-enabled-section" style="display:none;">
+                <div class="disable-form">
+                    <p style="color:#666;font-size:0.9rem;margin-bottom:1rem;">输入当前验证码以禁用两步验证</p>
+                    <input type="text" id="disable-code" placeholder="000000" maxlength="6" inputmode="numeric">
+                    <button class="btn btn-danger" id="disable-btn" onclick="disableTOTP()">禁用两步验证</button>
+                    <div class="message" id="disable-message"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // const API_BASE = '/api/v1';  // Now loaded from config.js as PLATFORM_CONFIG.API_BASE
+        let token = localStorage.getItem('token');
+        let username = localStorage.getItem('username');
+
+        // 检查登录状态
+        if (!token || !username) {
+            window.location.href = 'login.html';
+        }
+
+        // 初始化
+        document.getElementById('nav-username').textContent = username;
+        document.getElementById('avatar-letter').textContent = username.charAt(0).toUpperCase();
+        document.getElementById('display-username').textContent = username;
+        loadUserEmail();
+        loadTOTPStatus();
+
+        // 加载用户邮箱
+        async function loadUserEmail() {
+            try {
+                const r = await fetch(`${PLATFORM_CONFIG.API_BASE}/api/v1/users/${username}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (r.ok) {
+                    const d = await r.json();
+                    document.getElementById('display-email').textContent = d.email || '-';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // 加载 TOTP 状态
+        async function loadTOTPStatus() {
+            try {
+                const r = await fetch(`${PLATFORM_CONFIG.API_BASE}/api/v1/auth/totp/status?username=${username}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (r.ok) {
+                    const d = await r.json();
+                    updateTOTPUI(d.totp_enabled);
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('totp-status-badge').textContent = '加载失败';
+            }
+        }
+
+        function updateTOTPUI(enabled) {
+            const badge = document.getElementById('totp-status-badge');
+            const disabledSection = document.getElementById('totp-disabled-section');
+            const enabledSection = document.getElementById('totp-enabled-section');
+
+            if (enabled) {
+                badge.textContent = '已启用';
+                badge.className = 'status-badge status-enabled';
+                disabledSection.style.display = 'none';
+                enabledSection.style.display = 'block';
+            } else {
+                badge.textContent = '未启用';
+                badge.className = 'status-badge status-disabled';
+                disabledSection.style.display = 'block';
+                enabledSection.style.display = 'none';
+            }
+        }
+
+        // 设置 TOTP
+        async function setupTOTP() {
+            const btn = document.getElementById('setup-btn');
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+
+            try {
+                const r = await fetch(`${PLATFORM_CONFIG.API_BASE}/api/v1/auth/totp/setup?username=${username}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (r.ok) {
+                    const d = await r.json();
+                    // 显示 QR 码（base64）
+                    document.getElementById('qr-image').src = `data:image/png;base64,${d.qr_code}`;
+                    document.getElementById('secret-text').textContent = d.secret;
+                    document.getElementById('totp-setup-area').classList.add('active');
+                    document.getElementById('setup-btn').parentElement.parentElement.style.display = 'none';
+                } else {
+                    const d = await r.json();
+                    alert(d.detail || '生成失败');
+                }
+            } catch (e) {
+                alert('网络错误');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '启用两步验证';
+            }
+        }
+
+        // 激活 TOTP
+        async function activateTOTP() {
+            const code = document.getElementById('activate-code').value.trim();
+            const msgEl = document.getElementById('activate-message');
+            const btn = document.getElementById('activate-btn');
+
+            if (!/^\d{6}$/.test(code)) {
+                msgEl.className = 'message error';
+                msgEl.textContent = '请输入 6 位数字验证码';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '激活中...';
+            msgEl.className = 'message';
+            msgEl.style.display = 'none';
+
+            try {
+                const r = await fetch(`${PLATFORM_CONFIG.API_BASE}/api/v1/auth/totp/activate?username=${username}&code=${code}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (r.ok) {
+                    msgEl.className = 'message success';
+                    msgEl.textContent = '✅ 两步验证已启用！下次登录时将需要验证码';
+                    updateTOTPUI(true);
+                    setTimeout(() => {
+                        document.getElementById('totp-setup-area').classList.remove('active');
+                    }, 2000);
+                } else {
+                    const d = await r.json();
+                    msgEl.className = 'message error';
+                    msgEl.textContent = d.detail || '验证码错误，请重试';
+                }
+            } catch (e) {
+                msgEl.className = 'message error';
+                msgEl.textContent = '网络错误';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '激活';
+            }
+        }
+
+        // 禁用 TOTP
+        async function disableTOTP() {
+            const code = document.getElementById('disable-code').value.trim();
+            const msgEl = document.getElementById('disable-message');
+            const btn = document.getElementById('disable-btn');
+
+            if (!/^\d{6}$/.test(code)) {
+                msgEl.className = 'message error';
+                msgEl.textContent = '请输入 6 位数字验证码';
+                return;
+            }
+
+            if (!confirm('确定要禁用两步验证吗？这将降低账户安全性。')) return;
+
+            btn.disabled = true;
+            btn.textContent = '禁用中...';
+            msgEl.className = 'message';
+            msgEl.style.display = 'none';
+
+            try {
+                const r = await fetch(`${PLATFORM_CONFIG.API_BASE}/api/v1/auth/totp/disable?username=${username}&code=${code}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (r.ok) {
+                    msgEl.className = 'message success';
+                    msgEl.textContent = '两步验证已禁用';
+                    updateTOTPUI(false);
+                    document.getElementById('disable-code').value = '';
+                } else {
+                    const d = await r.json();
+                    msgEl.className = 'message error';
+                    msgEl.textContent = d.detail || '验证码错误';
+                }
+            } catch (e) {
+                msgEl.className = 'message error';
+                msgEl.textContent = '网络错误';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '禁用两步验证';
+            }
+        }
+
+        function cancelSetup() {
+            document.getElementById('totp-setup-area').classList.remove('active');
+            document.getElementById('totp-disabled-section').querySelector('.action-row').parentElement.style.display = 'block';
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
