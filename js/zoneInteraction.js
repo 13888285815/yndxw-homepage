@@ -62,6 +62,37 @@
   ];
 
   /**
+   * 模拟数据：老年区养生知识列表
+   */
+  const elderlyHealthTips = [
+    { name: '春季养生指南', desc: '多吃蔬菜水果，少吃辛辣油腻，适当运动如散步、太极拳', icon: '🌿', price: 0 },
+    { name: '高血压自我管理', desc: '限制盐分摄入，每天不超过6克，定时测量血压', icon: '🩸', price: 0 },
+    { name: '糖尿病饮食调理', desc: '控制碳水化合物摄入，少食多餐，定时定量', icon: '💉', price: 0 },
+    { name: '睡眠健康指南', desc: '保持规律作息，每晚7-8小时睡眠', icon: '😴', price: 0 },
+    { name: '骨骼保健知识', desc: '适量补钙，多晒太阳，预防骨质疏松', icon: '🦴', price: 0 },
+    { name: '心理健康维护', desc: '保持乐观心态，多与家人朋友交流', icon: '🧘', price: 0 },
+  ];
+
+  /**
+   * 模拟数据：老年区社区互助列表
+   */
+  const elderlyCommunityHelps = [
+    { name: '李大爷', desc: '陪聊散步 · 500米内 · 每周一三可约', icon: '👴', price: 0 },
+    { name: '王阿姨', desc: '代购代办 · 800米内 · 随时可约', icon: '👵', price: 0 },
+    { name: '张师傅', desc: '家电维修 · 1.2千米内 · 提前预约', icon: '🔧', price: 0 },
+  ];
+
+  /**
+   * 模拟数据：残障区无障碍设置列表
+   */
+  const accessibilitySettings = [
+    { name: '高对比度模式', desc: '增强文字与背景对比度，方便视力不佳用户', icon: '👁️', price: 0 },
+    { name: '大字体显示', desc: '字体放大至24px-36px可调', icon: '🔤', price: 0 },
+    { name: '语音朗读', desc: '自动朗读页面内容', icon: '🔊', price: 0 },
+    { name: '键盘导航', desc: '支持Tab/Enter等键盘操作', icon: '⌨️', price: 0 },
+  ];
+
+  /**
    * 通用的列表展示函数
    */
   function showList(zoneId, moduleType) {
@@ -83,6 +114,13 @@
       case 'children':
         if (moduleType === 'story') { items = childrenStories; title = '🧸 儿童区 · 互动故事'; theme = childrenTheme; }
         else if (moduleType === 'game') { items = childrenGames; title = '🧸 儿童区 · 益智游戏'; theme = childrenTheme; }
+        break;
+      case 'elderly':
+        if (moduleType === 'health') { items = elderlyHealthTips; title = '🏯 老年区 · 养生知识'; theme = elderlyTheme; }
+        else if (moduleType === 'community') { items = elderlyCommunityHelps; title = '🏯 老年区 · 社区互助'; theme = elderlyTheme; }
+        break;
+      case 'accessible':
+        if (moduleType === 'settings') { items = accessibilitySettings; title = '♿ 残障区 · 无障碍设置'; theme = accessibleTheme; }
         break;
     }
 
@@ -149,6 +187,24 @@
     descColor: '#666',
   };
 
+  const elderlyTheme = {
+    headerBg: 'rgba(141,110,99,0.2)',
+    btnBg: '#8D6E63',
+    cardBg: '#FFF8E1',
+    cardBorder: '#FFB74D',
+    nameColor: '#5D4037',
+    descColor: '#666',
+  };
+
+  const accessibleTheme = {
+    headerBg: 'rgba(255,99,71,0.2)',
+    btnBg: '#FF6347',
+    cardBg: '#fff',
+    cardBorder: '#000',
+    nameColor: '#000',
+    descColor: '#333',
+  };
+
   /**
    * 为2D界面的所有模块卡片绑定点击事件
    */
@@ -190,14 +246,15 @@
           if (iconText === '🎤') handler = () => initVoiceAssistant(overlay);
           else if (iconText === '❤️') handler = () => showHealthMonitor(overlay);
           else if (iconText === '🆘') handler = () => showEmergencyCall(overlay);
-          else if (iconText === '🤝') handler = () => showCommunityHelp(overlay);
-          else if (iconText === '🌿') handler = () => showHealthKnowledge(overlay);
+          else if (iconText === '🤝') handler = () => showList(zoneId, 'community');
+          else if (iconText === '🌿') handler = () => showList(zoneId, 'health');
           break;
         case 'accessible':
           if (iconText === '🔊' || iconText === '🎙️') handler = () => showVoiceControl(overlay);
           else if (iconText === '🎨') handler = () => showAccessibilitySettings(overlay);
           else if (iconText === '👁️') handler = () => showHighContrastMode(overlay);
           else if (iconText === '⌨️') handler = () => showKeyboardNav(overlay);
+          else if (iconText === '⚙️') handler = () => showList(zoneId, 'settings');
           break;
       }
 
