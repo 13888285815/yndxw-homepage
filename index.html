@@ -144,7 +144,10 @@
               loadJS('js/plaza.js'),
               loadJS('js/zonePanels.js'),
               loadJS('js/app.js')
-            ]);
+            ]).then(() => {
+              // 加载2D界面交互模块（需求文档§5.2.5）
+              return loadJS('js/zoneInteraction.js');
+            });
           }).then(function() {
             setProgress(90, '启动中...');
           }).catch(function(err) {

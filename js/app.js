@@ -329,6 +329,11 @@ class App3D {
     overlay.innerHTML = content;
     overlay.style.display = 'block';
     
+    // 触发自定义事件：2D界面已显示（供zoneInteraction.js监听）
+    setTimeout(() => {
+      document.dispatchEvent(new CustomEvent('zone2d-shown', { detail: { zoneId: zoneId } }));
+    }, 0);
+    
     // 隐藏3D场景的canvas并暂停渲染（节省GPU）
     this.pauseRendering();
     const canvas = document.querySelector('canvas');
