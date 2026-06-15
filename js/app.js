@@ -111,42 +111,85 @@ class App3D {
   /**
    * 显示2D降级界面（WebGL不支持或加载超时）
    */
+  /**
+   * 显示2D降级界面（WebGL不支持或加载超时）
+   * 完善的降级方案：功能完整的2D导航界面
+   */
   showFallback2D() {
     console.log('[App3D] 显示2D降级界面');
+    
+    // 隐藏加载屏幕
     const loadingScreen = document.getElementById('loading-screen');
-    loadingScreen.style.display = 'none';
-
-    // 创建2D降级界面
+    if (loadingScreen) loadingScreen.style.display = 'none';
+    
+    // 创建2D降级界面（注入到body）
     const fallback = document.createElement('div');
     fallback.id = 'fallback-2d';
     fallback.style.cssText = `
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: linear-gradient(135deg, #87CEEB 0%, #E0F7FA 100%);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      font-family: 'PingFang SC', sans-serif; padding: 20px;
+      background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0d0d2a 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+      font-family: 'PingFang SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 40px 20px; overflow-y: auto; color: #fff;
     `;
+    
+    // 五区数据配置
+    const zones = [
+      { id: 'adult', name: '成人区', icon: '🏢', desc: '商业中心 · 专业AI助手与数字产品交易', color: '#4361ee' },
+      { id: 'teen', name: '青少年区', icon: '🎒', desc: '学习中心 · 编程教育与学科辅导', color: '#4cc9f0' },
+      { id: 'children', name: '儿童区', icon: '🧸', desc: '游乐中心 · 互动故事与益智游戏', color: '#ff4081' },
+      { id: 'elderly', name: '老年区', icon: '🏯', desc: '养生中心 · 语音助手与健康监测', color: '#8d6e63' },
+      { id: 'accessible', name: '残障友好区', icon: '♿', desc: '无障碍中心 · 高对比度与屏幕阅读器', color: '#ff6347' }
+    ];
+    
+    // 构建界面HTML
+    let zonesHTML = '';
+    zones.forEach(zone => {
+      zonesHTML += `
+        <div class="zone-card" data-zone="${zone.id}" style="
+          background: rgba(255,255,255,0.1);
+          border: 2px solid ${zone.color};
+          border-radius: 16px;
+          padding: 30px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.3s;
+          backdrop-filter: blur(10px);
+        " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 24px rgba(0,0,0,0.3)'" 
+           onmouseout="this.style.transform=''; this.style.boxShadow=''">
+          <div style="font-size: 64px; margin-bottom: 16px;">${zone.icon}</div>
+          <h2 style="font-size: 24px; margin-bottom: 12px; color: ${zone.color};">${zone.name}</h2>
+          <p style="font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.6;">${zone.desc}</p>
+        </div>
+      `;
+    });
+    
     fallback.innerHTML = `
-      <h1 style="font-size: 32px; color: #333;">五区之门</h1>
-      <p style="font-size: 16px; color: #666; margin: 20px 0;">您的设备不支持3D场景，已自动切换到2D导航模式</p>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; max-width: 800px;">
-        <div style="background: #fff; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <div style="font-size: 40px;">🌆</div><h3>成人区</h3><p>商业中心</p>
+      <div style="max-width: 1000px; width: 100%;">
+        <div style="text-align: center; margin-bottom: 48px;">
+          <h1 style="font-size: 48px; font-weight: 700; margin-bottom: 16px; background: linear-gradient(135deg, #4361ee, #4cc9f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">五区之门</h1>
+          <p style="font-size: 18px; color: rgba(255,255,255,0.6);">您的设备不支持3D场景，已自动切换到2D导航模式</p>
         </div>
-        <div style="background: #fff; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <div style="font-size: 40px;">🎒</div><h3>青少年区</h3><p>学习中心</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+          ${zonesHTML}
         </div>
-        <div style="background: #fff; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <div style="font-size: 40px;">🧸</div><h3>儿童区</h3><p>游乐中心</p>
-        </div>
-        <div style="background: #fff; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <div style="font-size: 40px;">🏯</div><h3>老年区</h3><p>养生中心</p>
-        </div>
-        <div style="background: #fff; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <div style="font-size: 40px;">♿</div><h3>残障友好区</h3><p>无障碍中心</p>
+        <div style="text-align: center; margin-top: 48px; color: rgba(255,255,255,0.4); font-size: 14px;">
+          <p>💡 提示：建议使用Chrome/Firefox/Edge最新版本获得最佳体验</p>
         </div>
       </div>
     `;
+    
+    // 添加卡片点击事件
+    fallback.querySelectorAll('.zone-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const zoneId = card.dataset.zone;
+        const zoneName = zones.find(z => z.id === zoneId).name;
+        alert(`即将进入 ${zoneName}（2D模式）\n\n功能开发中...`);
+      });
+    });
+    
     document.body.appendChild(fallback);
+    console.log('[App3D] 2D降级界面已显示');
   }
 
   createFiveZones() {
