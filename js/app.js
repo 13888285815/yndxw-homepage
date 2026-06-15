@@ -535,6 +535,21 @@ class App3D {
   }
   
   /**
+   * 内存泄漏检测（需求文档§4）
+   * 监测场景切换后的内存是否正确释放
+   */
+  _checkMemoryLeaks() {
+    if (!performance.memory) return null;
+    const mem = performance.memory;
+    return {
+      usedMB: Math.round(mem.usedJSHeapSize / 1048576 * 10) / 10,
+      totalMB: Math.round(mem.totalJSHeapSize / 1048576 * 10) / 10,
+      limitMB: Math.round(mem.jsHeapSizeLimit / 1048576 * 10) / 10,
+      usagePercent: Math.round(mem.usedJSHeapSize / mem.jsHeapSizeLimit * 100)
+    };
+  }
+
+  /**
    * 性能压力测试（需求文档§4）
    * 创建100+个卡片对象测试渲染性能
    */
@@ -544,6 +559,8 @@ class App3D {
     const startTime = performance.now();
     const cardCount = 150;
     const cards = [];
+    const memBefore = this._checkMemoryLeaks();
+    if (memBefore) console.log(`[App3D] 测试前内存: ${memBefore.usedMB}MB / ${memBefore.limitMB}MB (${memBefore.usagePercent}%)`);
     
     // 创建150个卡片对象
     for (let i = 0; i < cardCount; i++) {
@@ -588,10 +605,24 @@ class App3D {
         card.material.dispose();
       });
       
+      // 强制GC（如果支持）并等待内存稳定
+      if (window.gc) window.gc();
+      
       // 统计结果
       const avgFPS = Math.round(fpsSamples.reduce((a, b) => a + b, 0) / fpsSamples.length);
       const minFPS = Math.min(...fpsSamples);
       const maxFPS = Math.max(...fpsSamples);
+      const memAfter = this._checkMemoryLeaks();
+      
+      // 内存泄漏检测
+      let memLeak = false;
+      let memDelta = 0;
+      if (memBefore && memAfter) {
+        memDelta = memAfter.usedMB - memBefore.usedMB;
+        // 如果清理后内存增长超过10MB，标记为潜在泄漏
+        memLeak = memDelta > 10;
+        console.log(`[App3D] 内存变化: ${memBefore.usedMB}MB → ${memAfter.usedMB}MB (Δ${memDelta > 0 ? '+' : ''}${memDelta}MB)`);
+      }
       
       console.log('[App3D] 性能测试结果:');
       console.log(`  - 卡片数量: ${cardCount}`);
@@ -599,9 +630,11 @@ class App3D {
       console.log(`  - 平均FPS: ${avgFPS}`);
       console.log(`  - 最小FPS: ${minFPS}`);
       console.log(`  - 最大FPS: ${maxFPS}`);
-      console.log(`  - 是否达标: ${avgFPS >= 55 ? '✅ PASS' : '❌ FAIL'}`);
+      console.log(`  - FPS达标: ${avgFPS >= 55 ? '✅ PASS' : '❌ FAIL'}`);
+      console.log(`  - 内存泄漏: ${memLeak ? '⚠️ 疑似泄漏 (Δ+' + memDelta + 'MB)' : '✅ 无泄漏'}`);
       
-      alert(`性能测试完成\n平均FPS: ${avgFPS}\n最小FPS: ${minFPS}\n状态: ${avgFPS >= 55 ? '✅通过' : '❌未达标'}`);
+      const memStr = memAfter ? `\n内存: ${memAfter.usedMB}MB (Δ${memDelta > 0 ? '+' : ''}${memDelta}MB) ${memLeak ? '⚠️' : '✅'}` : '';
+      alert(`性能测试完成\n平均FPS: ${avgFPS} | 最小: ${minFPS} | 最大: ${maxFPS}\nFPS状态: ${avgFPS >= 55 ? '✅通过' : '❌未达标'}${memStr}`);
     }, testDuration);
     
     return { cardCount, loadTime };
@@ -614,7 +647,9 @@ class App3D {
     const fpsElement = document.getElementById('fps-counter');
     if (fpsElement && !fpsElement.classList.contains('hidden')) {
       const color = this._currentFPS >= 55 ? '#4CAF50' : (this._currentFPS >= 30 ? '#FF9800' : '#F44336');
-      fpsElement.textContent = `FPS: ${this._currentFPS}`;
+      const memInfo = this._checkMemoryLeaks();
+      const memStr = memInfo ? ` | MEM: ${memInfo.usedMB}MB` : '';
+      fpsElement.textContent = `FPS: ${this._currentFPS}${memStr}`;
       fpsElement.style.color = color;
     }
   }
