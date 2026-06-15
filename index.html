@@ -45,6 +45,51 @@
       font-size: 13px; font-family: system-ui, sans-serif;
       letter-spacing: 0.5px;
     }
+
+    /* 2D后备界面样式（WebGL不支持时显示） */
+    #fallback-2d {
+      position: fixed; inset: 0; z-index: 10000;
+      background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0d0d2a 100%);
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      color: white; font-family: system-ui, sans-serif;
+    }
+    #fallback-2d.show { display: flex; }
+    .fallback-title {
+      font-size: 32px; font-weight: 700; margin-bottom: 16px;
+      background: linear-gradient(135deg, #FFD700, #FFA500);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .fallback-subtitle {
+      font-size: 16px; color: rgba(255,255,255,0.6); margin-bottom: 48px;
+    }
+    .fallback-zones {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px;
+      max-width: 900px; width: 100%; padding: 0 24px;
+    }
+    .fallback-zone-card {
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px; padding: 24px; text-align: center;
+      cursor: pointer; transition: all 0.3s; backdrop-filter: blur(10px);
+    }
+    .fallback-zone-card:hover {
+      background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.24);
+      transform: translateY(-4px);
+    }
+    .fallback-zone-icon {
+      font-size: 48px; margin-bottom: 12px; display: block;
+    }
+    .fallback-zone-name {
+      font-size: 18px; font-weight: 600; margin-bottom: 8px;
+    }
+    .fallback-zone-desc {
+      font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.5;
+    }
+    .fallback-tip {
+      margin-top: 48px; font-size: 13px; color: rgba(255,255,255,0.35);
+      padding: 12px 24px; background: rgba(255,255,255,0.04);
+      border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
+    }
   </style>
 </head>
 <body>
@@ -55,6 +100,40 @@
       <div id="loading-progress"></div>
     </div>
     <div class="loading-tip">正在加载 3D 场景...</div>
+  </div>
+
+  <!-- 2D后备界面（WebGL不支持时显示） -->
+  <div id="fallback-2d">
+    <div class="fallback-title">五区之门</div>
+    <div class="fallback-subtitle">检测到您的浏览器不支持3D渲染，已为您切换到2D兼容模式</div>
+    <div class="fallback-zones">
+      <div class="fallback-zone-card" onclick="alert('成人区 - 2D界面开发中')">
+        <span class="fallback-zone-icon">🏢</span>
+        <div class="fallback-zone-name">成人区</div>
+        <div class="fallback-zone-desc">商业区，付费服务、专业工具、企业级应用</div>
+      </div>
+      <div class="fallback-zone-card" onclick="alert('青少年区 - 2D界面开发中')">
+        <span class="fallback-zone-icon">🎓</span>
+        <div class="fallback-zone-name">青少年区</div>
+        <div class="fallback-zone-desc">学习区，编程教育、学科辅导、兴趣培养</div>
+      </div>
+      <div class="fallback-zone-card" onclick="alert('儿童区 - 2D界面开发中')">
+        <span class="fallback-zone-icon">🧸</span>
+        <div class="fallback-zone-name">儿童区</div>
+        <div class="fallback-zone-desc">教育区，互动故事、益智游戏、安全教育</div>
+      </div>
+      <div class="fallback-zone-card" onclick="alert('老年区 - 2D界面开发中')">
+        <span class="fallback-zone-icon">🏯</span>
+        <div class="fallback-zone-name">老年区</div>
+        <div class="fallback-zone-desc">公益区，大字版、语音助手、健康监测</div>
+      </div>
+      <div class="fallback-zone-card" onclick="alert('残障友好区 - 2D界面开发中')">
+        <span class="fallback-zone-icon">♿</span>
+        <div class="fallback-zone-name">残障友好区</div>
+        <div class="fallback-zone-desc">无障碍区，高对比度、大字体、屏幕阅读器支持</div>
+      </div>
+    </div>
+    <div class="fallback-tip">💡 提示：使用 Chrome/Firefox/Edge 最新版本可获得最佳3D体验</div>
   </div>
 
   <div id="container"></div>
@@ -74,6 +153,7 @@
     2. Three.js：window.load 后 requestIdleCallback 触发（不在首屏关键路径）
     3. 业务模块：与Three.js同批次并行加载
     4. preconnect：提前预解析外部域名
+    5. WebGL降级：不支持时显示2D后备界面
   -->
   <script>
   (function() {
@@ -110,16 +190,39 @@
     }
     window.__removeLoadingScreen = hideLoading;
 
+    // 显示2D后备界面
+    window.__show2DFallback = function() {
+      hideLoading();
+      var fallback = document.getElementById('fallback-2d');
+      if (fallback) fallback.classList.add('show');
+    };
+
+    // 加载2D后备界面
+    function load2DFallback() {
+      setProgress(100, '加载2D兼容模式...');
+      setTimeout(function() {
+        window.__show2DFallback();
+      }, 500);
+    }
+
     // 启动
     window.addEventListener('DOMContentLoaded', function() {
       setProgress(5, '检测环境...');
 
       // 轻量WebGL检测（无需Three.js）
+      var webglSupported = false;
       try {
         var c = document.createElement('canvas');
         var gl = c.getContext('webgl2') || c.getContext('webgl');
-        if (!gl) { setProgress(100, '环境不支持3D'); hideLoading(); return; }
-      } catch(e) { hideLoading(); return; }
+        if (gl) { webglSupported = true; }
+      } catch(e) { webglSupported = false; }
+
+      if (!webglSupported) {
+        setProgress(100, '检测到兼容模式，正在加载2D界面...');
+        // WebGL不支持，加载2D后备界面
+        load2DFallback();
+        return;
+      }
 
       setProgress(10, '加载3D引擎...');
 
@@ -152,7 +255,8 @@
             setProgress(90, '启动中...');
           }).catch(function(err) {
             console.error('[Loader] 加载失败:', err);
-            hideLoading();
+            // Three.js加载失败，显示2D后备界面
+            load2DFallback();
           });
         });
       });
