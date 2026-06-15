@@ -23,6 +23,15 @@ class SceneManager {
       moveSpeed: 0.5,
       mouseSensitivity: 0.002
     };
+
+    // ── 真实感系统 ──
+    this.timeOfDay = 0.35;     // 0~1，白天的fraction（0.35=约8:30AM）
+    this.sunAngle = 0;         // 太阳弧度角（0=正东，π/2=正南）
+    this._sunLight = null;    // 太阳定向光引用
+    this._moonLight = null;   // 月光引用
+    this._skyMesh = null;      // 天空穹引用
+    this._fogColor = new THREE.Color(0x87CEEB);
+    this.windTime = 0;         // 风向时间计数器;
     
     // 性能：根据CPU核心数判断设备等级
     this.performanceLevel = (navigator.hardwareConcurrency || 4) >= 8 ? 'high' : 'low';
@@ -37,8 +46,9 @@ class SceneManager {
     
     // 创建场景
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x87CEEB); // 天蓝色背景
-    this.scene.fog = new THREE.Fog(0x87CEEB, 50, 200); // 雾效
+    this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.006); // 指数雾效
+    this._fogColor = new THREE.Color(0x87CEEB);
+    this.scene.background = this._fogColor;
 
     // 创建相机（第一人称）
     this.camera = new THREE.PerspectiveCamera(
@@ -94,24 +104,42 @@ class SceneManager {
   }
 
   /**
-   * 添加光照
+   * 添加光照（真实感：太阳+天空+地面反射）
    */
   addLights() {
-    // 环境光
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    // 环境光（随时间变化）
+    const ambientLight = new THREE.AmbientLight(0xfff8e7, 0.5);
     this.scene.add(ambientLight);
+    this._ambientLight = ambientLight;
 
-    // 方向光（模拟太阳）
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(50, 100, 50);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    this.scene.add(directionalLight);
+    // 太阳定向光
+    const sunLight = new THREE.DirectionalLight(0xfff5d0, 1.2);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 500;
+    sunLight.shadow.camera.left = -100;
+    sunLight.shadow.camera.right = 100;
+    sunLight.shadow.camera.top = 100;
+    sunLight.shadow.camera.bottom = -100;
+    sunLight.shadow.bias = -0.0001;
+    this.scene.add(sunLight);
+    this._sunLight = sunLight;
 
-    // 半球光（模拟天空和地面反射）
-    const hemisphereLight = new THREE.HemisphereLight(0x87CEEB, 0x3a7d44, 0.3);
+    // 月光（夜间补光，极弱）
+    const moonLight = new THREE.DirectionalLight(0x4466aa, 0.15);
+    moonLight.position.set(-50, 80, -50);
+    this.scene.add(moonLight);
+    this._moonLight = moonLight;
+
+    // 半球光（天空蓝→地面绿，反射环境光）
+    const hemisphereLight = new THREE.HemisphereLight(0x87CEEB, 0x3a7d44, 0.4);
     this.scene.add(hemisphereLight);
+    this._hemisphereLight = hemisphereLight;
+
+    // 根据时间更新光照
+    this._updateTimeOfDay(0);
   }
 
   /**
@@ -179,47 +207,297 @@ class SceneManager {
         (Math.random() - 0.5) * 180
       );
       grass.rotation.y = Math.random() * Math.PI * 2;
+      grass.userData.type = 'grass';
       this.scene.add(grass);
     }
   }
 
   /**
-   * 添加天空盒（大型球体，内侧渲染）
+   * 添加天空穹（渐变着色器：地平线→天顶）
+   * 模拟大气散射效果（头顶蓝→地平线浅色）
    */
   addSkybox() {
-    console.log('[SceneManager] 添加天空盒...');
-    const skyGeometry = new THREE.SphereGeometry(480, 32, 32);
-    const skyMaterial = new THREE.MeshBasicMaterial({
-      color: 0x87CEEB,
-      side: THREE.BackSide
+    console.log('[SceneManager] 添加天空穹...');
+    const skyGeo = new THREE.SphereGeometry(450, 32, 32);
+    skyGeo.scale(-1, 1, 1); // 内翻（内侧渲染）
+
+    // 顶点颜色属性（渐变：顶部深蓝，底部浅色）
+    const colors = [];
+    const posArr = skyGeo.attributes.position.array;
+    for (let i = 0; i < posArr.length; i += 3) {
+      const y = posArr[i + 1];
+      const t = Math.max(0, Math.min(1, (y + 450) / 900)); // 0=地平线，1=天顶
+      // 地平线: 浅橙/浅蓝 | 天顶: 深蓝
+      const horizonR = 0.85, horizonG = 0.92, horizonB = 1.0;
+      const zenithR = 0.30, zenithG = 0.55, zenithB = 0.95;
+      colors.push(zenithR + (horizonR - zenithR) * (1 - t),
+                  zenithG + (horizonG - zenithG) * (1 - t),
+                  zenithB + (horizonB - zenithB) * (1 - t));
+    }
+    skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+    const skyMat = new THREE.MeshBasicMaterial({
+      vertexColors: true,
+      side: THREE.BackSide,
+      fog: false  // 天空不受雾影响
     });
-    const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+    const sky = new THREE.Mesh(skyGeo, skyMat);
     this.scene.add(sky);
-    this.skyMesh = sky;
-    console.log('[SceneManager] 天空盒添加完成');
+    this._skyMesh = sky;
+    this._skyMat = skyMat;
+
+    // 添加太阳球体
+    this._addSunSphere();
+
+    // 添加地平线雾霾层
+    this._addHorizonHaze();
+
+    // 添加远景山脉轮廓
+    this._addDistantMountains();
+
+    console.log('[SceneManager] 天空穹添加完成');
   }
 
   /**
-   * 添加水面效果（半透明平面，波浪动画在updateWater中处理）
+   * 添加太阳球体（可见太阳圆盘 + 光晕）
+   */
+  _addSunSphere() {
+    // 太阳本体
+    const sunGeo = new THREE.SphereGeometry(6, 16, 16);
+    const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff5a0 });
+    const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+    sunMesh.name = 'sunMesh';
+    this.scene.add(sunMesh);
+    this._sunMesh = sunMesh;
+
+    // 太阳外晕（Billboard光晕）
+    const haloGeo = new THREE.SphereGeometry(10, 12, 12);
+    const haloMat = new THREE.MeshBasicMaterial({
+      color: 0xffee88,
+      transparent: true,
+      opacity: 0.15,
+      side: THREE.BackSide,
+      fog: false
+    });
+    const haloMesh = new THREE.Mesh(haloGeo, haloMat);
+    haloMesh.name = 'sunHalo';
+    this.scene.add(haloMesh);
+    this._sunHalo = haloMesh;
+  }
+
+  /**
+   * 添加地平线雾霾层（远处朦胧感）
+   */
+  _addHorizonHaze() {
+    const hazeGeo = new THREE.CylinderGeometry(440, 450, 20, 32, 1, true);
+    const hazeMat = new THREE.MeshBasicMaterial({
+      color: 0xd4e8f7,
+      transparent: true,
+      opacity: 0.3,
+      side: THREE.DoubleSide,
+      fog: false
+    });
+    const haze = new THREE.Mesh(hazeGeo, hazeMat);
+    haze.position.y = -20;
+    haze.name = 'horizonHaze';
+    this.scene.add(haze);
+    this._horizonHaze = haze;
+  }
+
+  /**
+   * 添加远景山脉轮廓（增加场景深度）
+   */
+  _addDistantMountains() {
+    const mtColors = [0x6b8fa3, 0x5c7e91, 0x7a9db0, 0x4d6b7a];
+    const mtPositions = [
+      { x: -200, z: -250, ry: 0.3, count: 8 },
+      { x: 200, z: -220, ry: -0.4, count: 6 },
+      { x: 0, z: -300, ry: 0, count: 10 },
+      { x: -280, z: -150, ry: 0.5, count: 5 },
+      { x: 280, z: -180, ry: -0.3, count: 7 },
+    ];
+
+    mtPositions.forEach(({ x, z, ry, count }) => {
+      for (let i = 0; i < count; i++) {
+        const h = 30 + Math.random() * 50;
+        const w = 15 + Math.random() * 25;
+        const geo = new THREE.ConeGeometry(w, h, 6 + Math.floor(Math.random() * 3));
+        const mat = new THREE.MeshLambertMaterial({
+          color: mtColors[i % mtColors.length],
+          fog: true
+        });
+        const mt = new THREE.Mesh(geo, mat);
+        mt.position.set(
+          x + (Math.random() - 0.5) * 150,
+          h / 2 - 5,
+          z + (Math.random() - 0.5) * 80
+        );
+        mt.rotation.y = Math.random() * Math.PI * 2;
+        this.scene.add(mt);
+      }
+    });
+  }
+
+  /**
+   * 更新时间/光照系统
+   * @param {number} delta — 时间增量（秒）
+   */
+  _updateTimeOfDay(delta) {
+    this.timeOfDay = (this.timeOfDay + delta * 0.01) % 1;
+    const t = this.timeOfDay; // 0=午夜, 0.25=日出, 0.5=正午, 0.75=日落
+
+    // 太阳仰角（弧度）：日出0→正午π/2→日落π→午夜-π/2
+    const sunElevation = Math.sin((t - 0.25) * Math.PI * 2) * (Math.PI / 2);
+    const sunVisible = sunElevation > -0.2;
+
+    // 太阳位置（半径200的球面上）
+    const sunX = Math.cos((t - 0.25) * Math.PI * 2) * 200;
+    const sunY = Math.sin((t - 0.25) * Math.PI * 2) * 200;
+    if (this._sunMesh) {
+      this._sunMesh.position.set(sunX, Math.max(-20, sunY), -180);
+      this._sunMesh.visible = sunVisible;
+      this._sunMesh.material.opacity = sunVisible ? Math.max(0, sunElevation + 0.2) : 0;
+    }
+    if (this._sunHalo) {
+      this._sunHalo.position.copy(this._sunMesh ? this._sunMesh.position : new THREE.Vector3(0, 0, 0));
+      this._sunHalo.visible = sunVisible;
+    }
+
+    // 光照颜色与强度（白天的动态变化）
+    let skyColor, sunColor, ambientIntensity, sunIntensity;
+
+    if (t < 0.2 || t > 0.8) {
+      // 🌙 夜晚：深蓝黑
+      skyColor = new THREE.Color(0x0a0a20);
+      sunColor = new THREE.Color(0x223366);
+      ambientIntensity = 0.08;
+      sunIntensity = 0;
+    } else if (t < 0.25) {
+      // 🌅 日出：橙红渐变
+      const r = (t - 0.2) / 0.05;
+      skyColor = new THREE.Color(0xff6633).lerp(new THREE.Color(0xff9966), r);
+      sunColor = new THREE.Color(0xffaa44);
+      ambientIntensity = 0.2 + r * 0.2;
+      sunIntensity = 0.4 * r;
+    } else if (t < 0.35) {
+      // 🌄 早晨：金黄光
+      const r = (t - 0.25) / 0.1;
+      skyColor = new THREE.Color(0xff9966).lerp(new THREE.Color(0x87CEEB), r);
+      sunColor = new THREE.Color(0xffdd88);
+      ambientIntensity = 0.4;
+      sunIntensity = 0.6 + r * 0.4;
+    } else if (t < 0.7) {
+      // ☀️ 白天：蓝天白云
+      skyColor = new THREE.Color(0x87CEEB);
+      sunColor = new THREE.Color(0xfff5d0);
+      ambientIntensity = 0.5;
+      sunIntensity = 1.2;
+    } else if (t < 0.8) {
+      // 🌆 黄昏：紫橙
+      const r = (t - 0.7) / 0.1;
+      skyColor = new THREE.Color(0x87CEEB).lerp(new THREE.Color(0xff5533), r);
+      sunColor = new THREE.Color(0xff8844);
+      ambientIntensity = 0.5 - r * 0.3;
+      sunIntensity = 1.2 - r * 0.8;
+    } else {
+      // 🌃 入夜：深紫
+      skyColor = new THREE.Color(0xff5533).lerp(new THREE.Color(0x0a0a20), (t - 0.8) / 0.2);
+      sunColor = new THREE.Color(0x332244);
+      ambientIntensity = 0.2;
+      sunIntensity = 0.1;
+    }
+
+    // 应用颜色
+    if (this._skyMesh && this._skyMat) {
+      this._skyMat.color = skyColor;
+    }
+    this.scene.background = skyColor;
+    this.scene.fog.color = skyColor;
+    this._fogColor = skyColor;
+
+    if (this._ambientLight) this._ambientLight.intensity = ambientIntensity;
+    if (this._hemisphereLight) {
+      this._hemisphereLight.color = skyColor;
+      this._hemisphereLight.groundColor = skyColor.clone().multiplyScalar(0.3);
+    }
+    if (this._sunLight) {
+      this._sunLight.color = sunColor;
+      this._sunLight.intensity = sunIntensity;
+      if (sunVisible) {
+        this._sunLight.position.set(sunX, Math.max(5, sunY), -100);
+        this._sunLight.target.position.set(0, 0, 0);
+      }
+    }
+    if (this._moonLight) {
+      this._moonLight.intensity = sunVisible ? 0 : 0.12;
+    }
+    if (this._horizonHaze) {
+      this._horizonHaze.material.opacity = sunVisible ? 0.25 : 0.1;
+    }
+  }
+
+  /**
+   * 添加真实感水面（波浪动画 + 天空反射 + 焦散模拟）
    */
   addWater() {
     console.log('[SceneManager] 添加水面...');
-    const waterGeometry = new THREE.PlaneGeometry(200, 200, 64, 64);
-    const waterMaterial = new THREE.MeshStandardMaterial({
-      color: 0x006994,
-      transparent: true,
-      opacity: 0.6,
-      roughness: 0.1,
-      metalness: 0.9
+    const W = 200, H = 200, seg = 96;
+    const waterGeo = new THREE.PlaneGeometry(W, H, seg, seg);
+
+    // 预存原始水面顶点
+    const origY = [];
+    waterGeo.attributes.position.array.forEach((v, i) => {
+      if (i % 3 === 1) origY.push(v);
     });
-    const water = new THREE.Mesh(waterGeometry, waterMaterial);
+    this._waterOrigY = origY;
+
+    const waterMat = new THREE.MeshPhysicalMaterial({
+      color: 0x1a6b8a,
+      transparent: true,
+      opacity: 0.78,
+      roughness: 0.05,
+      metalness: 0.1,
+      envMapIntensity: 1.2,
+      reflectivity: 0.9,
+      clearcoat: 0.8,
+      clearcoatRoughness: 0.1,
+      side: THREE.DoubleSide
+    });
+    const water = new THREE.Mesh(waterGeo, waterMat);
     water.rotation.x = -Math.PI / 2;
-    water.position.y = -0.3;
+    water.position.y = -0.2;
     water.position.z = 80;
+    water.receiveShadow = true;
     water.name = 'water';
     this.scene.add(water);
     this.waterMesh = water;
+
+    // 水面波光粒子（模拟阳光在水面的闪烁）
+    this._addWaterSparkles();
+
     console.log('[SceneManager] 水面添加完成');
+  }
+
+  _waterSparkles = [];
+  _addWaterSparkles() {
+    const count = this.performanceLevel === 'high' ? 80 : 30;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 180;
+      pos[i * 3 + 1] = -0.1;
+      pos[i * 3 + 2] = 80 + (Math.random() - 0.5) * 180;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({
+      color: 0xffffaa, size: 0.4,
+      transparent: true, opacity: 0.7,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.name = 'waterSparkles';
+    this.scene.add(pts);
+    this._waterSparkles = pts;
   }
 
   /**
@@ -243,13 +521,43 @@ class SceneManager {
   /**
    * 渲染循环
    */
+  _lastRenderTime = 0;
   render() {
     requestAnimationFrame(() => this.render());
+    const now = performance.now();
+    const delta = Math.min((now - this._lastRenderTime) / 1000, 0.05);
+    this._lastRenderTime = now;
+
+    // 更新时间/光照系统
+    this._updateTimeOfDay(delta);
     // 更新水面动画
     this.updateWater();
-    // 更新共享广场导航柱动画（呼吸+旋转）
+    // 更新共享广场导航柱动画
     this._updatePlazaPillars();
+    // 更新风向草动
+    this._updateGrassWind(delta);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /**
+   * 更新草丛/植被风向动画
+   */
+  _grassMeshes = [];
+  _windDir = new THREE.Vector3(1, 0, 0.3).normalize();
+  _updateGrassWind(delta) {
+    if (!this._grassMeshes.length) {
+      // 缓存草丛mesh
+      this.scene.traverse(obj => {
+        if (obj.isMesh && obj.userData.type === 'grass') this._grassMeshes.push(obj);
+      });
+    }
+    this.windTime += delta;
+    const windStrength = Math.sin(this.windTime * 1.5) * 0.15 + 0.1;
+    this._grassMeshes.forEach((g, i) => {
+      const sway = Math.sin(this.windTime * 2 + i * 0.7) * windStrength;
+      g.rotation.z = sway;
+      g.rotation.x = Math.sin(this.windTime * 1.3 + i) * windStrength * 0.5;
+    });
   }
 
   /**
@@ -276,20 +584,38 @@ class SceneManager {
   }
 
   /**
-   * 更新水面动画（每帧调用）
+   * 更新水面动画（Gerstner波模拟 + 波光粒子）
    */
   updateWater() {
     if (!this.waterMesh) return;
     const time = Date.now() * 0.001;
     const pos = this.waterMesh.geometry.attributes.position.array;
-    for (let i = 1; i < pos.length; i += 3) {
-      const ox = pos[i - 1];
-      const oz = (i + 1 < pos.length) ? pos[i + 1] : 0;
-      pos[i] = Math.sin(ox * 0.03 + time * 2) * 0.4
-               + Math.cos(oz * 0.03 + time * 1.5) * 0.3;
+    const origY = this._waterOrigY;
+    let vi = 1;
+    for (let i = 0; i < pos.length / 3; i++) {
+      const ox = pos[i * 3];
+      const oz = pos[i * 3 + 2];
+      // 叠加多个方向波（Gerstner波简化版）
+      pos[vi] = origY[i]
+        + Math.sin(ox * 0.05 + time * 1.8) * 0.35
+        + Math.cos(oz * 0.04 + time * 1.3) * 0.25
+        + Math.sin((ox + oz) * 0.03 + time * 2.1) * 0.15;
+      vi += 3;
     }
     this.waterMesh.geometry.attributes.position.needsUpdate = true;
     this.waterMesh.geometry.computeVertexNormals();
+
+    // 更新水面波光
+    if (this._waterSparkles) {
+      const sPos = this._waterSparkles.geometry.attributes.position.array;
+      const sparkleTime = time * 3;
+      for (let i = 0; i < sPos.length / 3; i++) {
+        const flicker = Math.sin(sparkleTime + i * 2.3);
+        sPos[i * 3 + 1] = -0.15 + Math.abs(flicker) * 0.25;
+      }
+      this._waterSparkles.geometry.attributes.position.needsUpdate = true;
+      this._waterSparkles.material.opacity = 0.4 + Math.abs(Math.sin(time * 2)) * 0.5;
+    }
   }
 
   /**

@@ -74,6 +74,12 @@ class App3D {
     this.sceneManager = window.sceneManager;
     this.sceneManager.init();
 
+        // ── 电影感色调映射 ──
+        const r = this.sceneManager.renderer;
+        r.toneMapping = THREE.ACESFilmicToneMapping;
+        r.toneMappingExposure = 1.05;
+        r.outputColorSpace = THREE.SRGBColorSpace;
+
     this.particleEffects = new window.ParticleEffects(this.sceneManager.getScene());
     this.particleEffects.init();
 

@@ -19,40 +19,135 @@ class ParticleEffects {
     this.createFloatingClouds();
     this.createCherryBlossoms();
     this.createStars();
+    this.createLeaves();  // 落叶系统
     this.setTheme('firefly'); // 默认主题
     console.log('[ParticleEffects] 粒子效果初始化完成');
   }
 
-  /* ========== 萤火虫（默认主题） ========== */
+  /* ========== 萤火虫（发光精灵球，真实光晕效果） ========== */
   createFireflies() {
-    const count = this.getParticleCount(60, 30);
-    const geometry = new THREE.BufferGeometry();
+    const count = this.getParticleCount(50, 25);
+    // 用小圆球代替点（模拟真实萤火虫发光体）
+    const fireflyGroup = new THREE.Group();
+    fireflyGroup.name = 'fireflies';
+    fireflyGroup.visible = false;
+    this.scene.add(fireflyGroup);
+
+    // 创建发光球几何体（外层光晕）
+    const glowGeo = new THREE.SphereGeometry(0.5, 8, 8);
+    // 创建萤火虫颜色变化列表
+    const ffColors = [0xffff88, 0xaaff66, 0x88ffaa, 0xffee44, 0x66ffaa];
+
+    for (let i = 0; i < count; i++) {
+      const group = new THREE.Group();
+      group.position.set(
+        (Math.random() - 0.5) * 100,
+        Math.random() * 8 + 0.5,
+        (Math.random() - 0.5) * 100
+      );
+
+      // 内核（亮核）
+      const coreGeo = new THREE.SphereGeometry(0.12, 6, 6);
+      const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
+      const core = new THREE.Mesh(coreGeo, coreMat);
+      group.add(core);
+
+      // 外层光晕（半透明大球）
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: ffColors[i % ffColors.length],
+        transparent: true,
+        opacity: 0.25,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.BackSide
+      });
+      const glow = new THREE.Mesh(new THREE.SphereGeometry(0.45, 8, 8), glowMat);
+      group.add(glow);
+
+      // 随机飞行数据
+      group.userData = {
+        origin: group.position.clone(),
+        phase: Math.random() * Math.PI * 2,
+        speedX: (Math.random() - 0.5) * 0.008,
+        speedY: (Math.random() - 0.5) * 0.005,
+        speedZ: (Math.random() - 0.5) * 0.008,
+        pulseSpeed: 1.5 + Math.random() * 1.5,
+        driftRange: 4 + Math.random() * 6,
+        glowMat: glowMat,
+        coreMat: coreMat
+      };
+
+      fireflyGroup.add(group);
+    }
+    this.particles.firefly = fireflyGroup;
+
+    // 同时保留旧版点云（性能模式降级用）
+    const geo = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
+    const colors = new THREE.Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
       positions[i * 3] = (Math.random() - 0.5) * 100;
       positions[i * 3 + 1] = Math.random() * 10 + 1;
       positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
-      colors[i * 3] = 0.8;
-      colors[i * 3 + 1] = 1.0;
-      colors[i * 3 + 2] = 0.2;
+      colors[i * 3] = 1; colors[i * 3 + 1] = 1; colors[i * 3 + 2] = 0.3;
     }
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    const material = new THREE.PointsMaterial({
-      size: 0.3,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.8,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const ptsMat = new THREE.PointsMaterial({
+      size: 0.3, vertexColors: true, transparent: true,
+      opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false
     });
-    const points = new THREE.Points(geometry, material);
-    points.name = 'fireflies';
-    points.visible = false;
-    this.scene.add(points);
-    this.particles.firefly = points;
-    points.matrixAutoUpdate = false; points.updateMatrix();
+    const pts = new THREE.Points(geo, ptsMat);
+    pts.visible = false; pts.name = 'fireflyPoints';
+    this.scene.add(pts);
+    this.particles.fireflyPoints = pts;
+  }
+
+  /* ========== 落叶系统（秋日氛围） ========== */
+  createLeaves() {
+    const count = this.getParticleCount(40, 15);
+    const leafGroup = new THREE.Group();
+    leafGroup.name = 'leaves';
+    leafGroup.visible = false;
+    this.scene.add(leafGroup);
+
+    const leafColors = [0xcc4422, 0xdd6633, 0xffaa44, 0x88aa44, 0xdd9955];
+    const leafShapes = [
+      new THREE.PlaneGeometry(0.4, 0.3),
+      new THREE.PlaneGeometry(0.3, 0.4),
+      new THREE.PlaneGeometry(0.35, 0.25),
+    ];
+
+    for (let i = 0; i < count; i++) {
+      const geo = leafShapes[i % leafShapes.length];
+      const mat = new THREE.MeshLambertMaterial({
+        color: leafColors[i % leafColors.length],
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const leaf = new THREE.Mesh(geo, mat);
+      leaf.position.set(
+        (Math.random() - 0.5) * 80,
+        Math.random() * 25 + 5,
+        (Math.random() - 0.5) * 80
+      );
+      leaf.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+      leaf.userData = {
+        fallSpeed: 0.01 + Math.random() * 0.015,
+        wobbleFreq: 1 + Math.random() * 2,
+        rotSpeed: (Math.random() - 0.5) * 2,
+        rotSpeedX: (Math.random() - 0.5) * 1.5,
+        phase: Math.random() * Math.PI * 2
+      };
+      leafGroup.add(leaf);
+    }
+    this.particles.leaves = leafGroup;
   }
 
   /* ========== 飘云 ========== */
@@ -164,6 +259,8 @@ class ParticleEffects {
       this.particles.cherry.visible = true;
     } else if (theme === 'star' && this.particles.stars) {
       this.particles.stars.visible = true;
+    } else if (theme === 'autumn' && this.particles.leaves) {
+      this.particles.leaves.visible = true;
     }
     console.log(`[ParticleEffects] 切换主题: ${theme}`);
   }
@@ -179,7 +276,7 @@ class ParticleEffects {
   /**
    * 更新粒子效果（每帧调用）
    */
-  update() {
+  update(delta) {
     const time = Date.now() * 0.001;
 
     // 更新萤火虫
