@@ -224,6 +224,17 @@ class DoorInteraction {
     
     animate();
   }
+  /**
+   * 销毁门交互管理器，移除事件监听
+   */
+  dispose() {
+    const container = document.getElementById('container');
+    if (container) {
+      container.removeEventListener('click', this._onClick);
+      container.removeEventListener('touchend', this._onTouchEnd);
+    }
+    this.doors = [];
+  }
 }
 
 // 导出

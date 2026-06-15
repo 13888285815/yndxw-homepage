@@ -71,6 +71,16 @@ class SceneManager {
 
     // 监听窗口大小变化
     window.addEventListener('resize', () => this.onResize());
+    
+    // WebGL上下文丢失处理
+    this.renderer.domElement.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      console.warn('[SceneManager] WebGL上下文丢失，尝试恢复...');
+    });
+    this.renderer.domElement.addEventListener('webglcontextrestored', () => {
+      console.log('[SceneManager] WebGL上下文已恢复，重新初始化场景...');
+      this.init();
+    });
 
     console.log('[SceneManager] 场景初始化完成');
   }

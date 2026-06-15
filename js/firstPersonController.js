@@ -163,6 +163,22 @@ class FirstPersonController {
   disable() {
     this.enabled = false;
   }
+  /**
+   * 销毁控制器，移除事件监听
+   */
+  dispose() {
+    const container = document.getElementById('container');
+    if (container) {
+      container.removeEventListener('mousedown', this._onMouseDown);
+      container.removeEventListener('mousemove', this._onMouseMove);
+      container.removeEventListener('mouseup', this._onMouseUp);
+      container.removeEventListener('touchstart', this._onTouchStart);
+      container.removeEventListener('touchmove', this._onTouchMove);
+      container.removeEventListener('touchend', this._onTouchEnd);
+    }
+    document.removeEventListener('mousemove', this._onDocMouseMove);
+    document.removeEventListener('touchmove', this._onDocTouchMove);
+  }
 }
 
 // 导出
