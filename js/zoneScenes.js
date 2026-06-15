@@ -326,6 +326,52 @@ class ZoneScenes {
     lightRing.rotation.x = Math.PI / 2;
     group.add(lightRing);
 
+    // 新增：金色雕像（4座，位于祭坛四角）
+    const statueCount = 4;
+    for (let i = 0; i < statueCount; i++) {
+      const angle = (i / statueCount) * Math.PI * 2;
+      const x = Math.cos(angle) * 4;
+      const z = Math.sin(angle) * 4;
+      
+      // 雕像底座（金色立方体）
+      const baseGeo = new THREE.BoxGeometry(0.8, 0.5, 0.8);
+      const base = new THREE.Mesh(baseGeo, mats.pillar);
+      base.position.set(x, 0.25, z);
+      group.add(base);
+      
+      // 雕像主体（金色球体，简化版）
+      const statueGeo = new THREE.SphereGeometry(0.5, 8, 8);
+      const statue = new THREE.Mesh(statueGeo, mats.pillar);
+      statue.position.set(x, 1, z);
+      group.add(statue);
+    }
+
+    // 新增：火炬（8个，围绕立柱）
+    const torchCount = Math.round(8 * objMultiplier);
+    for (let i = 0; i < torchCount; i++) {
+      const angle = (i / torchCount) * Math.PI * 2;
+      const x = Math.cos(angle) * 11;
+      const z = Math.sin(angle) * 11;
+      
+      // 火把杆（金色圆柱体）
+      const torchGeo = new THREE.CylinderGeometry(0.05, 0.05, 2, 6);
+      const torch = new THREE.Mesh(torchGeo, mats.pillar);
+      torch.position.set(x, 1, z);
+      group.add(torch);
+      
+      // 火焰（红色球体，发光）
+      const flameGeo = new THREE.SphereGeometry(0.2, 6, 6);
+      const flameMat = new THREE.MeshLambertMaterial({
+        color: 0xFF4500,
+        emissive: 0xFF4500,
+        emissiveIntensity: 0.8
+      });
+      const flame = new THREE.Mesh(flameGeo, flameMat);
+      flame.position.set(x, 2.2, z);
+      flame.userData = { isFlame: true };
+      group.add(flame);
+    }
+
     // 灯光（温暖金色光芒）- 减少灯光数量
     const palacelight = new THREE.PointLight(0xFFD700, 1.2, 50);
     palacelight.position.set(0, 12, 0);
