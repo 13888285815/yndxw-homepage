@@ -126,3 +126,36 @@
 - 完善各区列表项详情页的启动逻辑(对接后端API)
 
 **是否已部署**:✅ https://13888285815.github.io/yndxw-homepage/
+
+### 2026-06-16 09:45 [前端3D]
+
+**完成内容**:
+- 修复`showFallback2D()`区域卡片仅显示alert的问题：替换为真实三层导航（区域选择→模块列表→详情交互）
+- 新增`showFallbackZonePage()`：Fallback模式下显示区域模块卡片，支持鼠标点击+键盘Tab/Enter导航
+- 新增`showFallbackMainPage()`：Fallback模式下返回主界面
+- 添加全局`_fbModClick()`处理器：供Fallback模式HTML内联onclick调用
+- 为`getZone2DContent()`全部五区模块卡片添加`data-type`属性和`onclick=window._handleModuleClick()`处理器
+- 实现键盘无障碍支持：`tabindex` + `keydown`事件（WCAG 2.1 AA兼容）
+- 三层导航流程：主页(五区选择) → 区域页面(模块卡片) → 详情/交互面板
+
+**技术细节**:
+- `showFallback2D()`: zone-card添加`tabindex="0"`和`keydown`事件监听
+- `showFallbackZonePage()`: 动态构建模块卡片HTML，`data-type`属性标识模块类型，`onclick`触发`_handleModuleClick`
+- `showFallbackMainPage()`: DOM操作恢复主界面显示
+- `_fbModClick()`: 全局函数，调用`window._handleModuleClick(zoneId, moduleType)`
+- 模块卡片`data-type`属性：adult(agent/skill/token/api/repo/analytics/settlement/collab)、teen(course/progress/parent)、children(story/game/safety/parent)、elderly(voice/health/emergency/community/knowledge)、accessible(screenreader/keyboard/voice/settings/contrast)
+
+**需求对照**: P0 #13 五区之门3D场景（三层导航交互完善）
+
+**性能测试**:
+- 语法检查 ✅: node --check 通过
+- 首屏HTML大小: 5.7KB（符合<200KB要求）
+- Three.js: defer动态加载，不阻塞DOMContentLoaded
+- Git推送 ✅: 5edc169 main分支
+
+**下一步计划**:
+- 浏览器实际测试FPS（目标≥60FPS）和首屏时间（目标<1秒）
+- Lighthouse Performance评分测试（目标>90）
+- 对接后端API实现各模块真实功能（Token购买、语音助手等）
+
+**是否已部署**: ✅ https://13888285815.github.io/yndxw-homepage/
