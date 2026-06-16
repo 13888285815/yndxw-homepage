@@ -102,38 +102,41 @@
     <div class="loading-tip">正在加载 3D 场景...</div>
   </div>
 
-  <!-- 2D后备界面（WebGL不支持时显示） -->
+  <!-- 2D后备界面（WebGL不支持时显示，支持三层导航） -->
   <div id="fallback-2d">
-    <div class="fallback-title">五区之门</div>
-    <div class="fallback-subtitle">检测到您的浏览器不支持3D渲染，已为您切换到2D兼容模式</div>
-    <div class="fallback-zones">
-      <div class="fallback-zone-card" onclick="alert('成人区 - 2D界面开发中')">
-        <span class="fallback-zone-icon">🏢</span>
-        <div class="fallback-zone-name">成人区</div>
-        <div class="fallback-zone-desc">商业区，付费服务、专业工具、企业级应用</div>
+    <div id="fallback-main">
+      <div class="fallback-title">五区之门</div>
+      <div class="fallback-subtitle">2D兼容模式 · 支持三层导航</div>
+      <div class="fallback-zones">
+        <div class="fallback-zone-card" onclick="window._fbShowZone('adult')">
+          <span class="fallback-zone-icon">🏢</span>
+          <div class="fallback-zone-name">成人区</div>
+          <div class="fallback-zone-desc">商业区，付费服务、专业工具、企业级应用</div>
+        </div>
+        <div class="fallback-zone-card" onclick="window._fbShowZone('teen')">
+          <span class="fallback-zone-icon">🎓</span>
+          <div class="fallback-zone-name">青少年区</div>
+          <div class="fallback-zone-desc">学习区，编程教育、学科辅导、兴趣培养</div>
+        </div>
+        <div class="fallback-zone-card" onclick="window._fbShowZone('children')">
+          <span class="fallback-zone-icon">🧸</span>
+          <div class="fallback-zone-name">儿童区</div>
+          <div class="fallback-zone-desc">教育区，互动故事、益智游戏、安全教育</div>
+        </div>
+        <div class="fallback-zone-card" onclick="window._fbShowZone('elderly')">
+          <span class="fallback-zone-icon">🏯</span>
+          <div class="fallback-zone-name">老年区</div>
+          <div class="fallback-zone-desc">公益区，大字版、语音助手、健康监测</div>
+        </div>
+        <div class="fallback-zone-card" onclick="window._fbShowZone('accessible')">
+          <span class="fallback-zone-icon">♿</span>
+          <div class="fallback-zone-name">残障友好区</div>
+          <div class="fallback-zone-desc">无障碍区，高对比度、大字体、屏幕阅读器支持</div>
+        </div>
       </div>
-      <div class="fallback-zone-card" onclick="alert('青少年区 - 2D界面开发中')">
-        <span class="fallback-zone-icon">🎓</span>
-        <div class="fallback-zone-name">青少年区</div>
-        <div class="fallback-zone-desc">学习区，编程教育、学科辅导、兴趣培养</div>
-      </div>
-      <div class="fallback-zone-card" onclick="alert('儿童区 - 2D界面开发中')">
-        <span class="fallback-zone-icon">🧸</span>
-        <div class="fallback-zone-name">儿童区</div>
-        <div class="fallback-zone-desc">教育区，互动故事、益智游戏、安全教育</div>
-      </div>
-      <div class="fallback-zone-card" onclick="alert('老年区 - 2D界面开发中')">
-        <span class="fallback-zone-icon">🏯</span>
-        <div class="fallback-zone-name">老年区</div>
-        <div class="fallback-zone-desc">公益区，大字版、语音助手、健康监测</div>
-      </div>
-      <div class="fallback-zone-card" onclick="alert('残障友好区 - 2D界面开发中')">
-        <span class="fallback-zone-icon">♿</span>
-        <div class="fallback-zone-name">残障友好区</div>
-        <div class="fallback-zone-desc">无障碍区，高对比度、大字体、屏幕阅读器支持</div>
-      </div>
+      <div class="fallback-tip">💡 提示：使用 Chrome/Firefox/Edge 最新版本可获得最佳3D体验</div>
     </div>
-    <div class="fallback-tip">💡 提示：使用 Chrome/Firefox/Edge 最新版本可获得最佳3D体验</div>
+    <div id="fallback-zone-page" style="display:none"></div>
   </div>
 
   <div id="container"></div>
@@ -263,6 +266,144 @@
 
       // 兜底超时
       setTimeout(hideLoading, 8000);
+
+      // 2D后备界面三层导航（WebGL fallback）
+      window._fbShowZone = function(zoneId) {
+        const mainDiv = document.getElementById('fallback-main');
+        const pageDiv = document.getElementById('fallback-zone-page');
+        if (!mainDiv || !pageDiv) return;
+        mainDiv.style.display = 'none';
+        const zoneData = {
+          adult: { name: '🌆 成人区 · 商业中心', color: '#4361ee', bg: '#1a1a2e', modules: [
+            { icon: '🤖', name: 'AI Agent 市场', desc: '专业AI助手', type: 'agent' },
+            { icon: '🔧', name: 'Skill 交易市场', desc: '技能工具交易', type: 'skill' },
+            { icon: '💰', name: 'Token 购买', desc: '灵活计费', type: 'token' },
+            { icon: '📦', name: '个人仓库', desc: '类GitHub管理', type: 'repo' },
+            { icon: '📊', name: '数据分析', desc: '智能分析报告', type: 'analytics' },
+            { icon: '💵', name: '收入结算', desc: '查看收入提现', type: 'settlement' },
+          ]},
+          teen: { name: '🎒 青少年区 · 学习中心', color: '#2196F3', bg: '#E3F2FD', modules: [
+            { icon: '💻', name: '编程教育 Agent', desc: 'Python/JavaScript入门', type: 'course' },
+            { icon: '📐', name: '学科辅导 Agent', desc: '数学/物理/化学/英语', type: 'course' },
+            { icon: '🎨', name: '兴趣培养 Agent', desc: '音乐/绘画/摄影', type: 'course' },
+            { icon: '📈', name: '学习进度跟踪', desc: '可视化报告', type: 'progress' },
+            { icon: '👨👩👧', name: '家长监控面板', desc: '使用时间、内容过滤', type: 'parent' },
+          ]},
+          children: { name: '🧸 儿童区 · 游乐中心', color: '#FF4081', bg: '#FFF9C4', modules: [
+            { icon: '📖', name: '互动故事', desc: 'AI语音讲故事', type: 'story' },
+            { icon: '🧩', name: '益智游戏', desc: '数学游戏、拼图', type: 'game' },
+            { icon: '🚦', name: '安全教育', desc: '交通/消防/网络安全', type: 'safety' },
+            { icon: '👨👩👧', name: '家长监控', desc: '内容过滤', type: 'parent' },
+          ]},
+          elderly: { name: '🏯 老年区 · 养生中心', color: '#8D6E63', bg: '#FFF3E0', modules: [
+            { icon: '🎤', name: '语音助手', desc: '语音输入输出', type: 'voice' },
+            { icon: '❤️', name: '健康监测', desc: '血压、血糖记录', type: 'health' },
+            { icon: '🆘', name: '紧急呼叫', desc: '一键呼叫', type: 'emergency' },
+            { icon: '🤝', name: '社区互助', desc: '志愿服务', type: 'community' },
+            { icon: '🌿', name: '养生知识', desc: '健康生活指南', type: 'health' },
+          ]},
+          accessible: { name: '♿ 残障友好区 · 无障碍中心', color: '#FF6347', bg: '#fff', modules: [
+            { icon: '🔊', name: '屏幕阅读器', desc: 'ARIA标签、语音朗读', type: 'screenreader' },
+            { icon: '⌨️', name: '键盘导航', desc: 'Tab/Enter支持', type: 'keyboard' },
+            { icon: '🎙️', name: '语音控制', desc: '语音命令替代点击', type: 'voice' },
+            { icon: '🎨', name: '个性化设置', desc: '颜色、字体、语速', type: 'settings' },
+            { icon: '👁️', name: '高对比度', desc: 'WCAG 2.1 AA', type: 'contrast' },
+          ]},
+        };
+        const data = zoneData[zoneId];
+        if (!data) return;
+        pageDiv.innerHTML = `
+          <div style="padding:20px;min-height:100vh;background:${data.bg}">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 20px;background:${data.color};border-radius:12px 12px 0 0">
+              <div style="font-size:26px;font-weight:600;color:#fff">${data.name}</div>
+              <button onclick="window._fbBack()" style="padding:10px 20px;border:none;border-radius:8px;background:rgba(255,255,255,0.3);color:#fff;font-size:16px;cursor:pointer">← 返回</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:20px">
+              ${data.modules.map(m => `
+                <div onclick="window._fbShowList('${zoneId}','${m.type}')" style="border-radius:12px;padding:20px;background:#fff;border:2px solid ${data.color};transition:transform 0.2s,box-shadow 0.2s;cursor:pointer"
+                     onmouseenter="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 30px rgba(0,0,0,0.15)'"
+                     onmouseleave="this.style.transform='none';this.style.boxShadow='none'">
+                  <div style="font-size:40px;margin-bottom:10px">${m.icon}</div>
+                  <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:${data.color}">${m.name}</div>
+                  <div style="font-size:14px;color:#666">${m.desc}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+        pageDiv.style.display = 'block';
+      };
+
+      window._fbShowList = function(zoneId, moduleType) {
+        const pageDiv = document.getElementById('fallback-zone-page');
+        if (!pageDiv) return;
+        const zoneData = {
+          adult: { color: '#4361ee', bg: '#1a1a2e', items: moduleType === 'agent' ? [
+            { name: '编程助手', desc: 'Python/JavaScript代码生成与调试', price: 10, icon: '💻' },
+            { name: '设计大师', desc: 'UI/UX设计建议与素材生成', price: 15, icon: '🎨' },
+            { name: '数据分析师', desc: 'Excel/CSV数据可视化分析', price: 20, icon: '📊' },
+            { name: '文案策划', desc: '营销文案、广告语生成', price: 8, icon: '✍️' },
+          ] : [
+            { name: '高级爬虫工具', desc: '支持反爬对抗，自动代理轮换', price: 50, icon: '🕷️' },
+            { name: 'PDF转换器', desc: 'Word/Excel/图片转PDF，无水印', price: 20, icon: '📄' },
+            { name: 'API调试器', desc: 'REST/GraphQL请求模拟，参数校验', price: 30, icon: '🔌' },
+          ]},
+          teen: { color: '#2196F3', bg: '#E3F2FD', items: [
+            { name: 'Python入门', desc: '零基础Python编程入门，闯关式学习', price: 0, icon: '🐍' },
+            { name: 'JavaScript小游戏', desc: '用JS制作贪吃蛇、俄罗斯方块', price: 0, icon: '🎮' },
+            { name: 'Scratch创意编程', desc: '拖拽式编程，培养逻辑思维', price: 0, icon: '🧩' },
+            { name: 'HTML/CSS网页制作', desc: '从零开始做自己的网站', price: 0, icon: '🌐' },
+          ]},
+          children: { color: '#FF4081', bg: '#FFF9C4', items: moduleType === 'story' ? [
+            { name: '小红帽', desc: '经典格林童话，AI互动结局', icon: '🌲' },
+            { name: '三只小猪', desc: '建造不同的房子，结果会怎样？', icon: '🏠' },
+          ] : [
+            { name: '数学大冒险', desc: '加减乘除闯关，锻炼计算能力', icon: '🔢' },
+            { name: '记忆翻翻乐', desc: '翻牌配对，训练记忆力', icon: '🧠' },
+          ]},
+          elderly: { color: '#8D6E63', bg: '#FFF3E0', items: [
+            { name: '春季养生指南', desc: '多吃蔬菜水果，少吃辛辣油腻，适当运动', icon: '🌿' },
+            { name: '高血压自我管理', desc: '限制盐分摄入，每天不超过6克', icon: '🩸' },
+            { name: '糖尿病饮食调理', desc: '控制碳水化合物摄入，少食多餐', icon: '💉' },
+            { name: '睡眠健康指南', desc: '保持规律作息，每晚7-8小时睡眠', icon: '😴' },
+          ]},
+          accessible: { color: '#FF6347', bg: '#fff', items: [
+            { name: '高对比度模式', desc: '增强文字与背景对比度', icon: '👁️' },
+            { name: '大字体显示', desc: '字体放大至24px-36px可调', icon: '🔤' },
+            { name: '语音朗读', desc: '自动朗读页面内容', icon: '🔊' },
+            { name: '键盘导航', desc: '支持Tab/Enter等键盘操作', icon: '⌨️' },
+          ]},
+        };
+        const data = zoneData[zoneId];
+        if (!data) return;
+        pageDiv.innerHTML = `
+          <div style="padding:20px;min-height:100vh;background:${data.bg}">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 20px;background:${data.color};border-radius:12px 12px 0 0">
+              <div style="font-size:22px;font-weight:600;color:#fff">列表</div>
+              <button onclick="window._fbShowZone('${zoneId}')" style="padding:10px 20px;border:none;border-radius:8px;background:rgba(255,255,255,0.3);color:#fff;font-size:16px;cursor:pointer">← 返回</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:20px">
+              ${data.items.map(item => `
+                <div style="border-radius:12px;padding:20px;background:#fff;border:2px solid ${data.color};cursor:pointer"
+                     onclick="alert('正在启动 ${item.name}...')">
+                  <div style="font-size:40px;margin-bottom:10px">${item.icon}</div>
+                  <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:${data.color}">${item.name}</div>
+                  <div style="font-size:14px;color:#666;margin-bottom:10px">${item.desc}</div>
+                  ${item.price !== undefined ? `<div style="color:#f72585;font-weight:600">💰 ${item.price} Token${item.price === 0 ? '（免费）' : '/次'}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      };
+
+
+      window._fbBack = function() {
+        const mainDiv = document.getElementById('fallback-main');
+        const pageDiv = document.getElementById('fallback-zone-page');
+        if (mainDiv) mainDiv.style.display = 'block';
+        if (pageDiv) pageDiv.style.display = 'none';
+      };
     });
   })();
   </script>

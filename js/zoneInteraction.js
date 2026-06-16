@@ -98,11 +98,9 @@
   function showList(zoneId, moduleType) {
     const overlay = document.getElementById('zone-2d-interface');
     if (!overlay) return;
-
     let items = [];
     let title = '';
     let theme = {};
-
     switch(zoneId) {
       case 'adult':
         if (moduleType === 'agent') { items = adultAgents; title = '🌆 成人区 · AI Agent 市场'; theme = adultTheme; }
@@ -123,19 +121,18 @@
         if (moduleType === 'settings') { items = accessibilitySettings; title = '♿ 残障区 · 无障碍设置'; theme = accessibleTheme; }
         break;
     }
-
     const grid = overlay.querySelector('.module-grid');
     if (!grid) return;
-
     const listHTML = `
       <div class="list-page" style="padding:20px">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 20px;background:${theme.headerBg};border-radius:12px 12px 0 0">
           <div style="font-size:26px;font-weight:600">${title}</div>
-          <button onclick="window.location.reload()" style="padding:10px 20px;border:none;border-radius:8px;background:${theme.btnBg};color:#fff;font-size:16px;cursor:pointer">← 返回</button>
+          <button onclick="window.showZonePage('${zoneId}')" style="padding:10px 20px;border:none;border-radius:8px;background:${theme.btnBg};color:#fff;font-size:16px;cursor:pointer">← 返回</button>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:20px">
-          ${items.map(item => `
+          ${items.map((item, idx) => `
             <div style="border-radius:12px;padding:20px;background:${theme.cardBg};border:1px solid ${theme.cardBorder};transition:transform 0.2s,box-shadow 0.2s;cursor:pointer"
+                 onclick="window.showDetail('${zoneId}','${moduleType}',${idx})"
                  onmouseenter="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 30px rgba(0,0,0,0.15)'"
                  onmouseleave="this.style.transform='none';this.style.boxShadow='none'">
               <div style="font-size:40px;margin-bottom:10px">${item.icon || '📦'}</div>
@@ -147,14 +144,181 @@
                   ${item.rating ? `<span style="color:#ffd700">⭐ ${item.rating}</span>` : ''}
                 </div>
               ` : ''}
-              <button onclick="alert('即将跳转到使用页面')" style="margin-top:12px;width:100%;padding:10px;background:${theme.btnBg};color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer">${item.price === 0 ? '免费使用' : '立即购买'}</button>
             </div>
           `).join('')}
         </div>
       </div>
     `;
-
     overlay.innerHTML = listHTML;
+  }
+
+
+  /**
+   * 详情页展示函数（第三层导航）
+   */
+  function showDetail(zoneId, moduleType, itemIdx) {
+    const overlay = document.getElementById('zone-2d-interface');
+    if (!overlay) return;
+    let items = [], title = '', theme = {};
+    switch(zoneId) {
+      case 'adult':
+        if (moduleType === 'agent') { items = adultAgents; title = 'AI Agent 详情'; theme = adultTheme; }
+        else if (moduleType === 'skill') { items = adultSkills; title = 'Skill 详情'; theme = adultTheme; }
+        break;
+      case 'teen': items = teenCourses; title = '课程详情'; theme = teenTheme; break;
+      case 'children':
+        if (moduleType === 'story') { items = childrenStories; title = '互动故事详情'; theme = childrenTheme; }
+        else if (moduleType === 'game') { items = childrenGames; title = '游戏详情'; theme = childrenTheme; }
+        break;
+      case 'elderly':
+        if (moduleType === 'health') { items = elderlyHealthTips; title = '养生知识详情'; theme = elderlyTheme; }
+        else if (moduleType === 'community') { items = elderlyCommunityHelps; title = '互助详情'; theme = elderlyTheme; }
+        break;
+      case 'accessible':
+        if (moduleType === 'settings') { items = accessibilitySettings; title = '无障碍设置详情'; theme = accessibleTheme; }
+        break;
+    }
+    const item = items[itemIdx];
+    if (!item) return;
+    const reviews = [
+      { user: '张***', rating: 5, text: '非常好用，解决了我的实际问题！' },
+      { user: '李***', rating: 4, text: '整体满意，操作简单上手快' },
+      { user: '王***', rating: 5, text: '强烈推荐，效果超出预期' },
+    ];
+    const features = getDetailFeatures(item, zoneId, moduleType);
+    const detailHTML = `
+      <div class="detail-page" style="padding:20px;max-width:900px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 20px;background:${theme.headerBg};border-radius:12px 12px 0 0">
+          <div style="font-size:22px;font-weight:600">${title}</div>
+          <button onclick="window.showList('${zoneId}','${moduleType}')" style="padding:10px 20px;border:none;border-radius:8px;background:${theme.btnBg};color:#fff;font-size:16px;cursor:pointer">← 返回列表</button>
+        </div>
+        <div style="padding:30px;background:${theme.cardBg};border:1px solid ${theme.cardBorder};border-top:none;border-radius:0 0 12px 12px">
+          <div style="display:flex;align-items:flex-start;gap:24px;margin-bottom:30px">
+            <div style="font-size:80px;flex-shrink:0">${item.icon || '📦'}</div>
+            <div style="flex:1">
+              <h2 style="font-size:28px;font-weight:700;margin:0 0 10px;color:${theme.nameColor}">${item.name}</h2>
+              <p style="font-size:16px;line-height:1.8;color:${theme.descColor};margin:0 0 15px">${item.desc}</p>
+              <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+                ${item.rating ? `<span style="color:#ffd700;font-size:20px">${'⭐'.repeat(Math.round(item.rating))} ${item.rating}</span>` : ''}
+                ${item.price !== undefined ? `<span style="font-size:22px;font-weight:700;color:#f72585">💰 ${item.price} Token${item.price === 0 ? '（免费）' : '/次'}</span>` : ''}
+                <span style="font-size:14px;color:#999">已有 1,234+ 用户使用</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-bottom:30px">
+            <h3 style="font-size:20px;font-weight:600;margin:0 0 15px;padding-bottom:10px;border-bottom:2px solid ${theme.cardBorder}">📋 功能介绍</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+              ${features.map(f => `<div style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:8px;background:rgba(0,0,0,0.05)"><span style="font-size:22px">${f.icon}</span><div><div style="font-size:14px;font-weight:600">${f.name}</div><div style="font-size:12px;color:#888">${f.desc}</div></div></div>`).join('')}
+            </div>
+          </div>
+          <div style="margin-bottom:30px">
+            <h3 style="font-size:20px;font-weight:600;margin:0 0 15px;padding-bottom:10px;border-bottom:2px solid ${theme.cardBorder}">💬 用户评价</h3>
+            ${reviews.map(r => `<div style="padding:15px;border-radius:8px;background:rgba(0,0,0,0.05);margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-weight:600">${r.user}</span><span style="color:#ffd700">${'⭐'.repeat(r.rating)}</span></div><div style="font-size:14px;color:#555">${r.text}</div></div>`).join('')}
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button onclick="alert('正在启动 ${item.name}...')" style="flex:1;min-width:160px;padding:14px 24px;background:${theme.btnBg};color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:600;cursor:pointer">${item.price === 0 ? '🚀 免费使用' : '💳 立即购买'}</button>
+            <button onclick="alert('已收藏！')" style="padding:14px 24px;background:rgba(0,0,0,0.08);color:${theme.nameColor};border:1px solid ${theme.cardBorder};border-radius:10px;font-size:16px;cursor:pointer">⭐ 收藏</button>
+            <button onclick="window.showList('${zoneId}','${moduleType}')" style="padding:14px 24px;background:rgba(0,0,0,0.08);color:${theme.descColor};border:1px solid ${theme.cardBorder};border-radius:10px;font-size:16px;cursor:pointer">← 返回</button>
+          </div>
+        </div>
+      </div>
+    `;
+    overlay.innerHTML = detailHTML;
+  }
+
+
+  /**
+   * 获取详情页功能列表
+   */
+  function getDetailFeatures(item, zoneId, moduleType) {
+    const base = [
+      { icon: '⚡', name: '响应速度', desc: '< 1秒' },
+      { icon: '🔒', name: '数据安全', desc: '端到端加密' },
+      { icon: '🌐', name: '多端同步', desc: '手机/电脑通用' },
+    ];
+    if (zoneId === 'adult') base.push(
+      { icon: '🤖', name: 'AI模型', desc: moduleType === 'agent' ? 'GPT-4级别' : '本地推理' },
+      { icon: '📊', name: '使用统计', desc: '实时用量追踪' }
+    );
+    else if (zoneId === 'teen') base.push(
+      { icon: '📚', name: '课程时长', desc: '约30-60分钟' },
+      { icon: '🎓', name: '学习认证', desc: '完成获证书' }
+    );
+    else if (zoneId === 'children') base.push(
+      { icon: '👨‍👩‍👧', name: '家长控制', desc: '可设置时间' },
+      { icon: '🎮', name: '互动模式', desc: '游戏化学习' }
+    );
+    else if (zoneId === 'elderly') base.push(
+      { icon: '🔊', name: '语音朗读', desc: '支持语音播报' },
+      { icon: '🔤', name: '大字显示', desc: '24px以上字体' }
+    );
+    else if (zoneId === 'accessible') base.push(
+      { icon: '♿', name: '无障碍', desc: 'WCAG 2.1 AA' },
+      { icon: '🎯', name: '精准导航', desc: 'Tab键支持' }
+    );
+    return base;
+  }
+
+
+  /**
+   * 返回区域主页面
+   */
+  function showZonePage(zoneId) {
+    const overlay = document.getElementById('zone-2d-interface');
+    if (!overlay) return;
+    const zoneModules = {
+      adult: [
+        { icon: '🤖', name: 'AI Agent 市场', desc: '专业AI助手，涵盖编程、设计、数据分析', type: 'agent', price: 10 },
+        { icon: '🔧', name: 'Skill 交易市场', desc: '技能工具交易，订阅解锁高级功能', type: 'skill', price: 20 },
+        { icon: '💰', name: 'Token 购买', desc: '购买Token使用平台工具，灵活计费', type: 'token', price: 0 },
+        { icon: '🔑', name: 'API 密钥管理', desc: '管理API密钥，远程调用平台服务', type: 'api', price: 0 },
+        { icon: '📦', name: '个人仓库', desc: '类GitHub，管理数字仓库和项目', type: 'repo', price: 0 },
+        { icon: '📊', name: '数据分析面板', desc: '实时数据可视化，智能分析报告', type: 'analytics', price: 25 },
+        { icon: '💵', name: '收入结算', desc: '卖家收入查看、提现申请', type: 'settlement', price: 0 },
+        { icon: '🎯', name: '实时协作', desc: 'WebSocket多人协作，视频处理', type: 'collab', price: 30 },
+      ],
+      teen: [
+        { icon: '💻', name: '编程教育 Agent', desc: 'Python/JavaScript入门，游戏化编程', type: 'course', price: 0 },
+        { icon: '📐', name: '学科辅导 Agent', desc: '数学/物理/化学/英语，互动式学习', type: 'course', price: 0 },
+        { icon: '🎨', name: '兴趣培养 Agent', desc: '音乐/绘画/摄影，AI辅助创意', type: 'course', price: 0 },
+        { icon: '📈', name: '学习进度跟踪', desc: 'AI自动记录学习轨迹，可视化报告', type: 'progress', price: 0 },
+        { icon: '👨👩👧', name: '家长监控面板', desc: '使用时间、内容过滤、成绩报告', type: 'parent', price: 0 },
+      ],
+      children: [
+        { icon: '📖', name: '互动故事', desc: 'AI语音讲故事，互动选择结局', type: 'story', price: 0 },
+        { icon: '🧩', name: '益智游戏', desc: '数学游戏、拼图、记忆训练', type: 'game', price: 0 },
+        { icon: '🚦', name: '安全教育', desc: '交通安全、消防安全、网络安全', type: 'safety', price: 0 },
+        { icon: '👨👩👧', name: '家长监控', desc: '使用时间、内容过滤、安全浏览', type: 'parent', price: 0 },
+      ],
+      elderly: [
+        { icon: '🎤', name: '语音助手', desc: '语音输入输出，不用打字也能用', type: 'voice', price: 0 },
+        { icon: '❤️', name: '健康监测', desc: '血压、血糖记录，用药提醒', type: 'health', price: 0 },
+        { icon: '🆘', name: '紧急呼叫', desc: '一键呼叫家人或急救服务', type: 'emergency', price: 0 },
+        { icon: '🤝', name: '社区互助', desc: '志愿服务、邻里帮助', type: 'community', price: 0 },
+        { icon: '🌿', name: '养生知识', desc: '养生知识推送，健康生活指南', type: 'health', price: 0 },
+      ],
+      accessible: [
+        { icon: '🔊', name: '屏幕阅读器', desc: 'ARIA标签、语音朗读全站内容', type: 'screenreader', price: 0 },
+        { icon: '⌨️', name: '键盘导航', desc: '2D界面支持完整键盘导航', type: 'keyboard', price: 0 },
+        { icon: '🎙️', name: '语音控制', desc: '语音命令替代鼠标点击', type: 'voice', price: 0 },
+        { icon: '🎨', name: '个性化设置', desc: '颜色方案、字体大小(≥24px)、语速', type: 'settings', price: 0 },
+        { icon: '👁️', name: '高对比度模式', desc: '黑白/护眼模式，WCAG 2.1 AA', type: 'contrast', price: 0 },
+      ],
+    };
+    const modules = zoneModules[zoneId] || [];
+    const themeMap = { adult: adultTheme, teen: teenTheme, children: childrenTheme, elderly: elderlyTheme, accessible: accessibleTheme };
+    const theme = themeMap[zoneId] || adultTheme;
+    const grid = overlay.querySelector('.module-grid');
+    if (!grid) return;
+    grid.innerHTML = modules.map(m => `
+      <div class="module-card" onclick="window._handleModuleClick('${zoneId}','${m.type}')">
+        <div class="module-icon">${m.icon}</div>
+        <div class="module-name">${m.name}</div>
+        <div class="module-desc">${m.desc}</div>
+        <span class="module-badge ${m.price === 0 ? 'free' : ''}">${m.price === 0 ? '免费' : '付费'}</span>
+      </div>
+    `).join('');
+    bindModuleCardEvents(zoneId);
   }
 
   /**
@@ -704,9 +868,45 @@
     console.log('[ZoneInteraction] 2D界面交互初始化完成');
   }
 
-  // 导出全局函数
+  // 导出全局函数（支持HTML内联onclick调用）
   window.showAgentList = (zoneId) => showList(zoneId, 'agent');
   window.showSkillList = (zoneId) => showList(zoneId, 'skill');
+  window.showDetail = showDetail;
+  window.showList = showList;
+  window.showZonePage = showZonePage;
+
+  // 模块卡片点击处理器（统一入口）
+  window._handleModuleClick = function(zoneId, moduleType) {
+    if (zoneId === 'adult') {
+      if (moduleType === 'agent') showList(zoneId, 'agent');
+      else if (moduleType === 'skill') showList(zoneId, 'skill');
+      else if (moduleType === 'token') showTokenPurchase(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'repo') showRepo(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'analytics') showAnalytics(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'collab') showCollab(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'settlement') alert('收入结算功能开发中');
+      else if (moduleType === 'api') alert('API密钥管理功能开发中');
+    } else if (zoneId === 'teen') {
+      showList(zoneId, 'course');
+    } else if (zoneId === 'children') {
+      if (moduleType === 'story') showList(zoneId, 'story');
+      else if (moduleType === 'game') showList(zoneId, 'game');
+      else if (moduleType === 'safety') showSafetyQuiz(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'parent') showParentMonitor(document.getElementById('zone-2d-interface'));
+    } else if (zoneId === 'elderly') {
+      if (moduleType === 'voice') initVoiceAssistant(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'health') showHealthMonitor(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'emergency') showEmergencyCall(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'community') showCommunityHelp(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'knowledge') showHealthKnowledge(document.getElementById('zone-2d-interface'));
+    } else if (zoneId === 'accessible') {
+      if (moduleType === 'screenreader') alert('屏幕阅读器已启用');
+      else if (moduleType === 'keyboard') showKeyboardNav(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'voice') showVoiceControl(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'contrast') showHighContrastMode(document.getElementById('zone-2d-interface'));
+      else if (moduleType === 'settings') showAccessibilitySettings(document.getElementById('zone-2d-interface'));
+    }
+  };
 
   // 页面加载完成后初始化
   if (document.readyState === 'loading') {
