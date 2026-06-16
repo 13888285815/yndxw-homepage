@@ -179,17 +179,175 @@ class App3D {
       </div>
     `;
     
-    // 添加卡片点击事件
+    // 添加卡片点击事件（支持键盘导航）
     fallback.querySelectorAll('.zone-card').forEach(card => {
+      card.setAttribute('tabindex', '0');
       card.addEventListener('click', () => {
         const zoneId = card.dataset.zone;
-        const zoneName = zones.find(z => z.id === zoneId).name;
-        alert(`即将进入 ${zoneName}（2D模式）\n\n功能开发中...`);
+        this.showFallbackZonePage(zoneId);
+      });
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.showFallbackZonePage(card.dataset.zone);
+        }
       });
     });
     
     document.body.appendChild(fallback);
     console.log('[App3D] 2D降级界面已显示');
+  }
+
+  /**
+   * 显示Fallback模式的区域页面（三层导航第二层）
+   */
+  showFallbackZonePage(zoneId) {
+    const fallback = document.getElementById('fallback-2d');
+    if (!fallback) return;
+    
+    // 隐藏主界面
+    fallback.querySelectorAll('.zone-card').forEach(c => c.style.display = 'none');
+    fallback.querySelector('h1').style.display = 'none';
+    fallback.querySelector('p').style.display = 'none';
+    fallback.querySelector('.fallback-tip') && (fallback.querySelector('.fallback-tip').style.display = 'none');
+    
+    // 五区模块配置
+    const zoneModules = {
+      adult: {
+        name: '🌆 成人区 · 商业中心', color: '#4361ee', bg: 'linear-gradient(135deg,#1a1a2e,#16213e)',
+        modules: [
+          { icon: '🤖', name: 'AI Agent 市场', desc: '专业AI助手，涵盖编程、设计、数据分析', type: 'agent', badge: '付费' },
+          { icon: '🔧', name: 'Skill 交易市场', desc: '技能工具交易，订阅解锁高级功能', type: 'skill', badge: '订阅制' },
+          { icon: '💰', name: 'Token 购买', desc: '购买Token使用平台工具，灵活计费', type: 'token', badge: '基础免费' },
+          { icon: '🔑', name: 'API 密钥管理', desc: '管理API密钥，远程调用平台服务', type: 'api', badge: '免费' },
+          { icon: '📦', name: '个人仓库', desc: '类GitHub，管理数字仓库和项目', type: 'repo', badge: '免费' },
+          { icon: '📊', name: '数据分析面板', desc: '实时数据可视化，智能分析报告', type: 'analytics', badge: '高级' },
+          { icon: '💵', name: '收入结算', desc: '卖家收入查看、提现申请', type: 'settlement', badge: '免费' },
+          { icon: '🎯', name: '实时协作', desc: 'WebSocket多人协作，视频处理', type: 'collab', badge: '付费' },
+        ]
+      },
+      teen: {
+        name: '🎒 青少年区 · 学习中心', color: '#2196F3', bg: 'linear-gradient(135deg,#E3F2FD,#BBDEFB)',
+        modules: [
+          { icon: '💻', name: '编程教育 Agent', desc: 'Python/JavaScript入门，游戏化编程', type: 'course', badge: '免费' },
+          { icon: '📐', name: '学科辅导 Agent', desc: '数学/物理/化学/英语，互动式学习', type: 'course', badge: '免费' },
+          { icon: '🎨', name: '兴趣培养 Agent', desc: '音乐/绘画/摄影，AI辅助创意', type: 'course', badge: '免费' },
+          { icon: '📈', name: '学习进度跟踪', desc: 'AI自动记录学习轨迹，可视化报告', type: 'progress', badge: '免费' },
+          { icon: '👨\u200d👩\u200d👧', name: '家长监控面板', desc: '使用时间、内容过滤、成绩报告', type: 'parent', badge: '需家长绑定' },
+        ]
+      },
+      children: {
+        name: '🧸 儿童区 · 游乐中心', color: '#FF4081', bg: 'linear-gradient(135deg,#FFF9C4,#FFEB3B)',
+        modules: [
+          { icon: '📖', name: '互动故事', desc: 'AI语音讲故事，互动选择结局', type: 'story', badge: '免费' },
+          { icon: '🧩', name: '益智游戏', desc: '数学游戏、拼图、记忆训练', type: 'game', badge: '免费' },
+          { icon: '🚦', name: '安全教育', desc: '交通安全、消防安全、网络安全', type: 'safety', badge: '免费' },
+          { icon: '👨\u200d👩\u200d👧', name: '家长监控', desc: '使用时间、内容过滤、安全浏览', type: 'parent', badge: '需家长绑定' },
+        ]
+      },
+      elderly: {
+        name: '🏯 老年区 · 养生中心', color: '#8D6E63', bg: 'linear-gradient(135deg,#FFF3E0,#FFB74D)',
+        modules: [
+          { icon: '🎤', name: '语音助手', desc: '语音输入输出，不用打字也能用', type: 'voice', badge: '免费' },
+          { icon: '❤️', name: '健康监测', desc: '血压、血糖记录，用药提醒', type: 'health', badge: '免费' },
+          { icon: '🆘', name: '紧急呼叫', desc: '一键呼叫家人或急救服务', type: 'emergency', badge: '免费' },
+          { icon: '🤝', name: '社区互助', desc: '志愿服务、邻里帮助', type: 'community', badge: '免费' },
+          { icon: '🌿', name: '养生知识', desc: '养生知识推送，健康生活指南', type: 'knowledge', badge: '免费' },
+        ]
+      },
+      accessible: {
+        name: '♿ 残障友好区 · 无障碍中心', color: '#FF6347', bg: '#fff',
+        modules: [
+          { icon: '🔊', name: '屏幕阅读器', desc: 'ARIA标签、语音朗读全站内容', type: 'screenreader', badge: '免费' },
+          { icon: '⌨️', name: '键盘导航', desc: '2D界面支持完整键盘导航', type: 'keyboard', badge: '免费' },
+          { icon: '🎙️', name: '语音控制', desc: '语音命令替代鼠标点击', type: 'voice', badge: '免费' },
+          { icon: '🎨', name: '个性化设置', desc: '颜色方案、字体大小(≥24px)、语速', type: 'settings', badge: '免费' },
+          { icon: '👁️', name: '高对比度模式', desc: '黑白/护眼模式，WCAG 2.1 AA', type: 'contrast', badge: '免费' },
+        ]
+      }
+    };
+    
+    const data = zoneModules[zoneId];
+    if (!data) return;
+    
+    // 构建模块卡片HTML
+    const moduleCardsHTML = data.modules.map(m => `
+      <div class="fb-module-card" data-type="${m.type}" style="
+        background: ${zoneId === 'accessible' ? '#fff' : 'rgba(255,255,255,0.9)'};
+        border: 2px solid ${data.color};
+        border-radius: 16px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: ${zoneId === 'accessible' ? '#000' : (zoneId === 'children' || zoneId === 'teen' ? '#333' : '#fff')};
+      " tabindex="0"
+        onclick="window._fbModClick('${zoneId}','${m.type}')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window._fbModClick('${zoneId}','${m.type}')}"
+        onmouseenter="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 30px rgba(0,0,0,0.15)'"
+        onmouseleave="this.style.transform='none';this.style.boxShadow='none'">
+        <div style="font-size:40px;margin-bottom:10px">${m.icon}</div>
+        <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:${data.color}">${m.name}</div>
+        <div style="font-size:14px;line-height:1.5;opacity:0.7">${m.desc}</div>
+        <div style="margin-top:10px"><span style="
+          background:${m.badge === '免费' ? '#4CAF50' : '#f72585'};
+          color:#fff;font-size:12px;padding:2px 10px;border-radius:10px
+        ">${m.badge}</span></div>
+      </div>
+    `).join('');
+    
+    // 创建区域页面
+    const zonePage = document.createElement('div');
+    zonePage.id = 'fallback-zone-page';
+    zonePage.innerHTML = `
+      <div style="max-width:1000px;width:100%;margin-top:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 20px;background:${data.color};border-radius:12px 12px 0 0">
+          <div style="font-size:26px;font-weight:600;color:#fff">${data.name}</div>
+          <button onclick="window.app3d.showFallbackMainPage()" style="
+            padding:10px 20px;border:none;border-radius:8px;background:rgba(255,255,255,0.3);
+            color:#fff;font-size:16px;cursor:pointer
+          ">← 返回</button>
+        </div>
+        <div style="background:${data.bg};border-radius:0 0 12px 12px;border:1px solid ${data.color};border-top:none;padding:20px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+            ${moduleCardsHTML}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    fallback.appendChild(zonePage);
+    
+    // 延迟绑定模块交互（等zoneInteraction.js加载）
+    setTimeout(() => {
+      if (window._handleModuleClick) {
+        zonePage.querySelectorAll('.fb-module-card').forEach(card => {
+          card.addEventListener('click', () => {
+            const type = card.dataset.type;
+            window._handleModuleClick(zoneId, type);
+          });
+        });
+      }
+    }, 100);
+    
+    console.log(`[App3D] 显示Fallback区域页面: ${zoneId}`);
+  }
+
+  /**
+   * 返回Fallback模式主界面
+   */
+  showFallbackMainPage() {
+    const fallback = document.getElementById('fallback-2d');
+    if (!fallback) return;
+    // 移除区域页面
+    const zonePage = fallback.querySelector('#fallback-zone-page');
+    if (zonePage) zonePage.remove();
+    // 恢复主界面
+    fallback.querySelectorAll('.zone-card').forEach(c => c.style.display = '');
+    const h1 = fallback.querySelector('h1');
+    if (h1) h1.style.display = '';
+    const p = fallback.querySelector('p');
+    if (p) p.style.display = '';
+    console.log('[App3D] 返回Fallback主界面');
   }
 
   createFiveZones() {
@@ -401,11 +559,11 @@ class App3D {
       .module-badge { font-size: 12px; padding: 2px 8px; border-radius: 4px; margin-top: 8px; display: inline-block; }
     `;
     const contents = {
-      'adult': `<style>${commonStyles}.zone-page{background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff}.back-btn{background:#4361ee;color:#fff}.module-card{background:rgba(255,255,255,.1);border:1px solid rgba(67,97,238,.3)}.module-name{color:#4cc9f0}.module-badge{background:#f72585;color:#fff}.module-badge.free{background:#4cc9f0;color:#000}</style><div class="zone-page"><div class="zone-header"><div class="zone-title">🌆 成人区 · 商业中心</div><button class="back-btn" onclick="window.app3d.returnToMainScene()">← 返回五区之门</button></div><div class="module-grid"><div class="module-card"><div class="module-icon">🤖</div><div class="module-name">AI Agent 市场</div><div class="module-desc">专业AI助手，涵盖编程、设计、数据分析</div><span class="module-badge">付费</span></div><div class="module-card"><div class="module-icon">🔧</div><div class="module-name">Skill 交易市场</div><div class="module-desc">技能工具交易，订阅解锁高级功能</div><span class="module-badge">订阅制</span></div><div class="module-card"><div class="module-icon">💰</div><div class="module-name">Token 购买</div><div class="module-desc">购买Token使用平台工具，灵活计费</div><span class="module-badge free">基础免费</span></div><div class="module-card"><div class="module-icon">🔑</div><div class="module-name">API 密钥管理</div><div class="module-desc">管理API密钥，远程调用平台服务</div><span class="module-badge free">免费</span></div><div class="module-card"><div class="module-icon">📦</div><div class="module-name">个人仓库</div><div class="module-desc">类GitHub，管理数字仓库和项目</div><span class="module-badge free">免费</span></div><div class="module-card"><div class="module-icon">📊</div><div class="module-name">数据分析面板</div><div class="module-desc">实时数据可视化，智能分析报告</div><span class="module-badge">高级</span></div><div class="module-card"><div class="module-icon">💵</div><div class="module-name">收入结算</div><div class="module-desc">卖家收入查看、提现申请</div><span class="module-badge free">免费</span></div><div class="module-card"><div class="module-icon">🎯</div><div class="module-name">实时协作</div><div class="module-desc">WebSocket多人协作，视频处理</div><span class="module-badge">付费</span></div></div></div>`,
-      'teen': `<style>${commonStyles}.zone-page{background:linear-gradient(135deg,#E3F2FD,#BBDEFB);color:#333}.back-btn{background:#2196F3;color:#fff}.module-card{background:#fff;border:1px solid #E3F2FD}.module-badge{background:#FF9800;color:#fff}.module-badge.free{background:#4CAF50;color:#fff}</style><div class="zone-page"><div class="zone-header"><div class="zone-title">🎒 青少年区 · 学习中心</div><button class="back-btn" onclick="window.app3d.returnToMainScene()">← 返回五区之门</button></div><div class="module-grid"><div class="module-card"><div class="module-icon">💻</div><div class="module-name">编程教育 Agent</div><div class="module-desc">Python/JavaScript入门，游戏化编程</div><span class="module-badge free">免费</span></div><div class="module-card"><div class="module-icon">📐</div><div class="module-name">学科辅导 Agent</div><div class="module-desc">数学/物理/化学/英语，互动式学习</div><span class="module-badge free">免费</span></div><div class="module-card"><div class="module-icon">🎨</div><div class="module-name">兴趣培养 Agent</div><div class="module-desc">音乐/绘画/摄影，AI辅助创意</div><span class="module-badge free">免费</span></div><div class="module-card"><div class="module-icon">📈</div><div class="module-name">学习进度跟踪</div><div class="module-desc">AI自动记录学习轨迹，可视化报告</div><span class="module-badge free">免费</span></div><div class="module-card"><div class="module-icon">👨‍👩‍👧</div><div class="module-name">家长监控面板</div><div class="module-desc">使用时间、内容过滤、成绩报告</div><span class="module-badge">需家长绑定</span></div></div></div>`,
-      'children': `<style>${commonStyles}.zone-page{background:linear-gradient(135deg,#FFF9C4,#FFEB3B);color:#333}.back-btn{background:#FF4081;color:#fff;border-radius:20px;font-size:20px;padding:15px 30px}.module-card{background:#fff;border:3px solid #FF4081;border-radius:20px}.module-icon{font-size:60px}.module-name{font-size:24px;color:#FF4081}.module-desc{font-size:18px}.module-badge{background:#4CAF50;color:#fff;font-size:16px;padding:4px 12px;border-radius:10px}</style><div class="zone-page"><div class="zone-header"><div class="zone-title" style="font-size:36px">🧸 儿童区 · 游乐中心</div><button class="back-btn" onclick="window.app3d.returnToMainScene()">← 回去</button></div><div class="module-grid"><div class="module-card"><div class="module-icon">📖</div><div class="module-name">互动故事</div><div class="module-desc">AI语音讲故事，互动选择结局</div><span class="module-badge">免费</span></div><div class="module-card"><div class="module-icon">🧩</div><div class="module-name">益智游戏</div><div class="module-desc">数学游戏、拼图、记忆训练</div><span class="module-badge">免费</span></div><div class="module-card"><div class="module-icon">🚦</div><div class="module-name">安全教育</div><div class="module-desc">交通安全、消防安全、网络安全</div><span class="module-badge">免费</span></div><div class="module-card"><div class="module-icon">👨‍👩‍👧</div><div class="module-name">家长监控</div><div class="module-desc">使用时间、内容过滤、安全浏览</div><span class="module-badge">需家长绑定</span></div></div></div>`,
-      'elderly': `<style>${commonStyles}.zone-page{background:linear-gradient(135deg,#FFF3E0,#FFB74D);color:#333}.back-btn{background:#8D6E63;color:#fff;font-size:22px;padding:15px 30px}.module-card{background:#fff;border:2px solid #FFB74D}.module-icon{font-size:50px}.module-name{font-size:24px;color:#8D6E63}.module-desc{font-size:20px;line-height:1.8}.module-badge{background:#4CAF50;color:#fff;font-size:18px}</style><div class="zone-page"><div class="zone-header"><div class="zone-title" style="font-size:36px">🏯 老年区 · 养生中心</div><button class="back-btn" onclick="window.app3d.returnToMainScene()">← 回去</button></div><div class="module-grid"><div class="module-card"><div class="module-icon">🎤</div><div class="module-name">语音助手</div><div class="module-desc">语音输入输出，不用打字也能用</div><span class="module-badge">免费</span></div><div class="module-card"><div class="module-icon">❤️</div><div class="module-name">健康监测</div><div class="module-desc">血压、血糖记录，用药提醒</div><span class="module-badge">免费</span></div><div class="module-card"><div class="module-icon">🆘</div><div class="module-name">紧急呼叫</div><div class="module-desc">一键呼叫家人或急救服务</div><span class="module-badge">免费</span></div><div class="module-card"><div class="module-icon">🤝</div><div class="module-name">社区互助</div><div class="module-desc">志愿服务、邻里帮助</div><span class="module-badge">免费</span></div><div class="module-card"><div class="module-icon">🌿</div><div class="module-name">养生知识</div><div class="module-desc">养生知识推送，健康生活指南</div><span class="module-badge">免费</span></div></div></div>`,
-      'accessible': `<style>${commonStyles}.zone-page{background:#fff;color:#000}.back-btn{background:#FF6347;color:#fff;font-size:22px;padding:15px 30px;border:3px solid #000}.module-card{background:#fff;border:3px solid #000}.module-icon{font-size:50px}.module-name{font-size:26px;color:#000;font-weight:700}.module-desc{font-size:22px;line-height:2;color:#333}.module-badge{background:#000;color:#fff;font-size:18px;border:2px solid #FF6347}</style><div class="zone-page"><div class="zone-header"><div class="zone-title" style="font-size:38px;font-weight:700">♿ 残障友好区 · 无障碍中心</div><button class="back-btn" onclick="window.app3d.returnToMainScene()">← 回去</button></div><div class="module-grid"><div class="module-card"><div class="module-icon">🔊</div><div class="module-name">屏幕阅读器</div><div class="module-desc">ARIA标签、语音朗读全站内容</div><span class="module-badge">免费</span></div><div class="module-card"><div class="module-icon">⌨️</div><div class="module-name">键盘导航</div><div class="module-desc">2D界面支持完整键盘导航</div><span class="module-badge">免费</span></div><div class="module-card"><div class="module-icon">🎙️</div><div class="module-name">语音控制</div><div class="module-desc">语音命令替代鼠标点击</div><span class="module-badge">免费</span></div><div class="module-card"><div class="module-icon">🎨</div><div class="module-name">个性化设置</div><div class="module-desc">颜色方案、字体大小(≥24px)、语速</div><span class="module-badge">免费</span></div><div class="module-card"><div class="module-icon">👁️</div><div class="module-name">高对比度模式</div><div class="module-desc">黑白/护眼模式，WCAG 2.1 AA</div><span class="module-badge">免费</span></div></div></div>`
+      'adult': `<style>${commonStyles}.zone-page{background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff}.back-btn{background:#4361ee;color:#fff}.module-card{background:rgba(255,255,255,.1);border:1px solid rgba(67,97,238,.3)}.module-name{color:#4cc9f0}.module-badge{background:#f72585;color:#fff}.module-badge.free{background:#4cc9f0;color:#000}</style><div class="zone-page"><div class="zone-header"><div class="zone-title">🌆 成人区 · 商业中心</div><button class="back-btn" onclick="window.app3d.returnToMainScene()">← 返回五区之门</button></div><div class="module-grid"><div class="module-card" data-type="agent" onclick="window._handleModuleClick('adult','agent')"><div class="module-icon">🤖</div><div class="module-name">AI Agent 市场</div><div class="module-desc">专业AI助手，涵盖编程、设计、数据分析</div><span class="module-badge">付费</span></div><div class="module-card" data-type="skill" onclick="window._handleModuleClick('adult','skill')"><div class="module-icon">🔧</div><div class="module-name">Skill 交易市场</div><div class="module-desc">技能工具交易，订阅解锁高级功能</div><span class="module-badge">订阅制</span></div><div class="module-card" data-type="token" onclick="window._handleModuleClick('adult','token')"><div class="module-icon">💰</div><div class="module-name">Token 购买</div><div class="module-desc">购买Token使用平台工具，灵活计费</div><span class="module-badge free">基础免费</span></div><div class="module-card" data-type="api" onclick="window._handleModuleClick('adult','api')"><div class="module-icon">🔑</div><div class="module-name">API 密钥管理</div><div class="module-desc">管理API密钥，远程调用平台服务</div><span class="module-badge free">免费</span></div><div class="module-card" data-type="repo" onclick="window._handleModuleClick('adult','repo')"><div class="module-icon">📦</div><div class="module-name">个人仓库</div><div class="module-desc">类GitHub，管理数字仓库和项目</div><span class="module-badge free">免费</span></div><div class="module-card" data-type="analytics" onclick="window._handleModuleClick('adult','analytics')"><div class="module-icon">📊</div><div class="module-name">数据分析面板</div><div class="module-desc">实时数据可视化，智能分析报告</div><span class="module-badge">高级</span></div><div class="module-card" data-type="settlement" onclick="window._handleModuleClick('adult','settlement')"><div class="module-icon">💵</div><div class="module-name">收入结算</div><div class="module-desc">卖家收入查看、提现申请</div><span class="module-badge free">免费</span></div><div class="module-card" data-type="collab" onclick="window._handleModuleClick('adult','collab')"><div class="module-icon">🎯</div><div class="module-name">实时协作</div><div class="module-desc">WebSocket多人协作，视频处理</div><span class="module-badge">付费</span></div></div></div>`,
+      'teen': `<style>${commonStyles}.zone-page{background:linear-gradient(135deg,#E3F2FD,#BBDEFB);color:#333}.back-btn{background:#2196F3;color:#fff}.module-card{background:#fff;border:1px solid #E3F2FD}.module-badge{background:#FF9800;color:#fff}.module-badge.free{background:#4CAF50;color:#fff}</style><div class="zone-page"><div class="zone-header"><div class="zone-title">🎒 青少年区 · 学习中心</div><button class="back-btn" onclick="window.app3d.returnToMainScene()">← 返回五区之门</button></div><div class="module-grid"><div class="module-card" data-type="course" onclick="window._handleModuleClick('teen','course')"><div class="module-icon">💻</div><div class="module-name">编程教育 Agent</div><div class="module-desc">Python/JavaScript入门，游戏化编程</div><span class="module-badge free">免费</span></div><div class="module-card" data-type="course" onclick="window._handleModuleClick('teen','course')"><div class="module-icon">📐</div><div class="module-name">学科辅导 Agent</div><div class="module-desc">数学/物理/化学/英语，互动式学习</div><span class="module-badge free">免费</span></div><div class="module-card" data-type="course" onclick="window._handleModuleClick('teen','course')"><div class="module-icon">🎨</div><div class="module-name">兴趣培养 Agent</div><div class="module-desc">音乐/绘画/摄影，AI辅助创意</div><span class="module-badge free">免费</span></div><div class="module-card" data-type="progress" onclick="window._handleModuleClick('teen','progress')"><div class="module-icon">📈</div><div class="module-name">学习进度跟踪</div><div class="module-desc">AI自动记录学习轨迹，可视化报告</div><span class="module-badge free">免费</span></div><div class="module-card" data-type="parent" onclick="window._handleModuleClick('teen','parent')"><div class="module-icon">👨\u200d👩\u200d👧</div><div class="module-name">家长监控面板</div><div class="module-desc">使用时间、内容过滤、成绩报告</div><span class="module-badge">需家长绑定</span></div></div></div>`,
+      'children': `<style>${commonStyles}.zone-page{background:linear-gradient(135deg,#FFF9C4,#FFEB3B);color:#333}.back-btn{background:#FF4081;color:#fff;border-radius:20px;font-size:20px;padding:15px 30px}.module-card{background:#fff;border:3px solid #FF4081;border-radius:20px}.module-icon{font-size:60px}.module-name{font-size:24px;color:#FF4081}.module-desc{font-size:18px}.module-badge{background:#4CAF50;color:#fff;font-size:16px;padding:4px 12px;border-radius:10px}</style><div class="zone-page"><div class="zone-header"><div class="zone-title" style="font-size:36px">🧸 儿童区 · 游乐中心</div><button class="back-btn" onclick="window.app3d.returnToMainScene()">← 回去</button></div><div class="module-grid"><div class="module-card" data-type="story" onclick="window._handleModuleClick('children','story')"><div class="module-icon">📖</div><div class="module-name">互动故事</div><div class="module-desc">AI语音讲故事，互动选择结局</div><span class="module-badge">免费</span></div><div class="module-card" data-type="game" onclick="window._handleModuleClick('children','game')"><div class="module-icon">🧩</div><div class="module-name">益智游戏</div><div class="module-desc">数学游戏、拼图、记忆训练</div><span class="module-badge">免费</span></div><div class="module-card" data-type="safety" onclick="window._handleModuleClick('children','safety')"><div class="module-icon">🚦</div><div class="module-name">安全教育</div><div class="module-desc">交通安全、消防安全、网络安全</div><span class="module-badge">免费</span></div><div class="module-card" data-type="parent" onclick="window._handleModuleClick('children','parent')"><div class="module-icon">👨\u200d👩\u200d👧</div><div class="module-name">家长监控</div><div class="module-desc">使用时间、内容过滤、安全浏览</div><span class="module-badge">需家长绑定</span></div></div></div>`,
+      'elderly': `<style>${commonStyles}.zone-page{background:linear-gradient(135deg,#FFF3E0,#FFB74D);color:#333}.back-btn{background:#8D6E63;color:#fff;font-size:22px;padding:15px 30px}.module-card{background:#fff;border:2px solid #FFB74D}.module-icon{font-size:50px}.module-name{font-size:24px;color:#8D6E63}.module-desc{font-size:20px;line-height:1.8}.module-badge{background:#4CAF50;color:#fff;font-size:18px}</style><div class="zone-page"><div class="zone-header"><div class="zone-title" style="font-size:36px">🏯 老年区 · 养生中心</div><button class="back-btn" onclick="window.app3d.returnToMainScene()">← 回去</button></div><div class="module-grid"><div class="module-card" data-type="voice" onclick="window._handleModuleClick('elderly','voice')"><div class="module-icon">🎤</div><div class="module-name">语音助手</div><div class="module-desc">语音输入输出，不用打字也能用</div><span class="module-badge">免费</span></div><div class="module-card" data-type="health" onclick="window._handleModuleClick('elderly','health')"><div class="module-icon">❤️</div><div class="module-name">健康监测</div><div class="module-desc">血压、血糖记录，用药提醒</div><span class="module-badge">免费</span></div><div class="module-card" data-type="emergency" onclick="window._handleModuleClick('elderly','emergency')"><div class="module-icon">🆘</div><div class="module-name">紧急呼叫</div><div class="module-desc">一键呼叫家人或急救服务</div><span class="module-badge">免费</span></div><div class="module-card" data-type="community" onclick="window._handleModuleClick('elderly','community')"><div class="module-icon">🤝</div><div class="module-name">社区互助</div><div class="module-desc">志愿服务、邻里帮助</div><span class="module-badge">免费</span></div><div class="module-card" data-type="knowledge" onclick="window._handleModuleClick('elderly','knowledge')"><div class="module-icon">🌿</div><div class="module-name">养生知识</div><div class="module-desc">养生知识推送，健康生活指南</div><span class="module-badge">免费</span></div></div></div>`,
+      'accessible': `<style>${commonStyles}.zone-page{background:#fff;color:#000}.back-btn{background:#FF6347;color:#fff;font-size:22px;padding:15px 30px;border:3px solid #000}.module-card{background:#fff;border:3px solid #000}.module-icon{font-size:50px}.module-name{font-size:26px;color:#000;font-weight:700}.module-desc{font-size:22px;line-height:2;color:#333}.module-badge{background:#000;color:#fff;font-size:18px;border:2px solid #FF6347}</style><div class="zone-page"><div class="zone-header"><div class="zone-title" style="font-size:38px;font-weight:700">♿ 残障友好区 · 无障碍中心</div><button class="back-btn" onclick="window.app3d.returnToMainScene()">← 回去</button></div><div class="module-grid"><div class="module-card" data-type="screenreader" onclick="window._handleModuleClick('accessible','screenreader')"><div class="module-icon">🔊</div><div class="module-name">屏幕阅读器</div><div class="module-desc">ARIA标签、语音朗读全站内容</div><span class="module-badge">免费</span></div><div class="module-card" data-type="keyboard" onclick="window._handleModuleClick('accessible','keyboard')"><div class="module-icon">⌨️</div><div class="module-name">键盘导航</div><div class="module-desc">2D界面支持完整键盘导航</div><span class="module-badge">免费</span></div><div class="module-card" data-type="voice" onclick="window._handleModuleClick('accessible','voice')"><div class="module-icon">🎙️</div><div class="module-name">语音控制</div><div class="module-desc">语音命令替代鼠标点击</div><span class="module-badge">免费</span></div><div class="module-card" data-type="settings" onclick="window._handleModuleClick('accessible','settings')"><div class="module-icon">🎨</div><div class="module-name">个性化设置</div><div class="module-desc">颜色方案、字体大小(≥24px)、语速</div><span class="module-badge">免费</span></div><div class="module-card" data-type="contrast" onclick="window._handleModuleClick('accessible','contrast')"><div class="module-icon">👁️</div><div class="module-name">高对比度模式</div><div class="module-desc">黑白/护眼模式，WCAG 2.1 AA</div><span class="module-badge">免费</span></div></div></div>`
     };
     return contents[zoneId] || `<h1>${zoneName}</h1><button onclick="window.app3d.returnToMainScene()">返回</button>`;
   }
@@ -712,3 +870,10 @@ window.addEventListener('DOMContentLoaded', () => {
   app.init();
   window.app3d = app; // 导出全局实例（方便调试）
 });
+
+// Fallback模式模块点击处理器（供HTML内联onclick调用）
+window._fbModClick = function(zoneId, moduleType) {
+  if (window._handleModuleClick) {
+    window._handleModuleClick(zoneId, moduleType);
+  }
+};
