@@ -47,6 +47,11 @@
       "description": "见证YNDXW在各领域的创新应用",
       "sections": [
         {
+          "title": "VibeVoice - 开源前沿语音AI",
+          "content": "微软开源的前沿语音AI平台，支持实时语音交互、多语言识别与合成，已在本站部署演示。",
+          "url": "https://13888285815.github.io/workbuddy-VibeVoice/"
+        },
+        {
           "title": "虚拟会议空间",
           "content": "某跨国企业使用YNDXW搭建虚拟总部，支持500人同时在线协作。"
         },
