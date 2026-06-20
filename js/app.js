@@ -106,6 +106,11 @@ class App3D {
     this.startRenderLoop();
 
     console.log('[App3D] 3D场景初始化完成！');
+
+    // 显示博物馆按钮（在首页时）
+    setTimeout(() => {
+      document.getElementById('museum-btn')?.classList.add('visible');
+    }, 1500);
   }
 
   /**
@@ -422,6 +427,8 @@ class App3D {
     
     // 隐藏门交互提示
     document.getElementById('zone-prompt').classList.add('hidden');
+    // 隐藏博物馆按钮
+    document.getElementById('museum-btn')?.classList.remove('visible');
     
     // 播放镜头推进动画（3秒）
     this.sceneManager.pushCamera(targetPos, 3000, () => {
@@ -569,7 +576,79 @@ class App3D {
   }
 
   /**
-   * 根据区域切换粒子主题
+   * 显示博物馆 L2 内容（从 data/content-museum.json 加载）
+   */
+  async showMuseumContent() {
+    console.log('[App3D] 显示博物馆内容...');
+    const overlay = document.getElementById('zone-2d-interface');
+    if (!overlay) return;
+    try {
+      const res = await fetch('data/content-museum.json');
+      const data = await res.json();
+      const html = `
+        <div style="max-width:1100px;margin:0 auto;padding:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 20px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:12px 12px 0 0;margin-bottom:2px">
+            <div style="font-size:26px;font-weight:600;color:#fff">🏛️ 数字博物馆</div>
+            <button onclick="window.app3d.returnToMainScene()" style="padding:10px 20px;border:none;border-radius:8px;background:rgba(255,255,255,0.2);color:#fff;font-size:16px;cursor:pointer">← 返回五区之门</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;padding:20px;background:rgba(255,255,255,0.03);border-radius:0 0 12px 12px">
+            ${data.exhibits.map(ex => `
+              <div onclick="window.app3d.showExhibitDetail('${ex.id}')" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;cursor:pointer;transition:all 0.25s" onmouseenter="this.style.transform='translateY(-3px)';this.style.borderColor='rgba(67,97,238,0.4)'" onmouseleave="this.style.transform='none';this.style.borderColor='rgba(255,255,255,0.1)'">
+                <div style="font-size:40px;margin-bottom:12px">${ex.icon || ''}</div>
+                <div style="font-size:20px;font-weight:600;color:#fff;margin-bottom:8px">${ex.name}</div>
+                <div style="font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6">${ex.description || ''}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+      overlay.innerHTML = html;
+      overlay.style.display = 'block';
+      this.pauseRendering();
+      const canvas = document.querySelector('canvas');
+      if (canvas) canvas.style.display = 'none';
+    } catch (e) {
+      console.error('[App3D] 加载博物馆内容失败:', e);
+    }
+  }
+
+  /**
+   * 显示单个展馆详情
+   */
+  async showExhibitDetail(exhibitId) {
+    try {
+      const res = await fetch('data/content-museum.json');
+      const data = await res.json();
+      const exhibit = data.exhibits.find(e => e.id === exhibitId);
+      if (!exhibit) return;
+      const overlay = document.getElementById('zone-2d-interface');
+      if (!overlay) return;
+      const html = `
+        <div style="max-width:1100px;margin:0 auto;padding:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 20px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:12px 12px 0 0;margin-bottom:2px">
+            <div style="font-size:26px;font-weight:600;color:#fff">${exhibit.icon || ''} ${exhibit.name}</div>
+            <button onclick="window.app3d.showMuseumContent()" style="padding:10px 20px;border:none;border-radius:8px;background:rgba(255,255,255,0.2);color:#fff;font-size:16px;cursor:pointer">← 返回</button>
+          </div>
+          <div style="padding:20px;background:rgba(255,255,255,0.03);border-radius:0 0 12px 12px">
+            <p style="color:rgba(255,255,255,0.6);margin-bottom:24px">${exhibit.description || ''}</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">
+              ${(exhibit.sections || []).map(sec => `
+                <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px">
+                  <div style="font-size:18px;font-weight:600;color:#4cc9f0;margin-bottom:10px">${sec.title}</div>
+                  <div style="font-size:14px;color:rgba(255,255,255,0.7);line-height:1.7;margin-bottom:12px">${sec.content}</div>
+                  ${sec.url ? `<a href="${sec.url}" target="_blank" style="display:inline-block;padding:8px 16px;background:linear-gradient(135deg,#4361ee,#4cc9f0);color:#fff;text-decoration:none;border-radius:8px;font-size:14px">查看详情 →</a>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>`;
+      overlay.innerHTML = html;
+    } catch (e) {
+      console.error('[App3D] 加载展馆详情失败:', e);
+    }
+  }
+
+  /**
+   * 显示博物馆按钮（在首页时显示）
    */
   switchParticleTheme(zoneId) {
     if (!this.particleEffects) return;
@@ -606,6 +685,9 @@ class App3D {
     
     // 隐藏返回按钮
     document.getElementById('back-button').classList.add('hidden');
+    
+    // 显示博物馆按钮（回到首页时）
+    document.getElementById('museum-btn')?.classList.add('visible');
     
     // 清理语音按钮（老年区）
     document.querySelectorAll('.voice-btn').forEach(btn => btn.remove());
@@ -692,6 +774,11 @@ class App3D {
   initUIEvents() {
     document.getElementById('back-button').addEventListener('click', () => {
       this.returnToMainScene();
+    });
+
+    // 博物馆按钮
+    document.getElementById('museum-btn')?.addEventListener('click', () => {
+      this.showMuseumContent();
     });
     
     // 开发模式快捷键（需求文档§4性能测试）
